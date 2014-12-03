@@ -6,6 +6,8 @@
 	"anthonyvipond/simple-pdo": "dev-master"
     },
     "autoload": {
-        "classmap": ["src", "src/DRT"]
+        "psr-4": {
+            "DRT\\" : "src"
+        }
     }
 }

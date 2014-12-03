@@ -1,8 +1,15 @@
 <?php namespace DRT;
 
 use Symfony\Component\Console\Command\Command;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Events\Dispatcher;
+use SimplePdo\SimplePdo;
 
-abstract class Base extends Command {
+abstract class BaseCommand extends Command {
+
+    protected $db;
+    protected $pdo;
+    protected $creds = __DIR__ . '/../config/database.php';
 
     protected function outputDuplicateData($dupeTable, $columns)
     {
@@ -103,6 +110,24 @@ abstract class Base extends Command {
     protected function comment($string)
     {
         $this->output->writeln('<comment>' . $string . '</comment>');
+    }
+
+    protected function initDb(Capsule $capsule)
+    {
+        $capsule->addConnection(require $this->creds);
+
+        $capsule->setEventDispatcher(new Dispatcher);
+        $capsule->setAsGlobal();
+        $capsule->bootEloquent();
+
+        return $capsule;
+    }
+
+    protected function init($output)
+    {
+        $this->output = $output;
+        $this->pdo = new SimplePdo(require $this->creds);
+        $this->db = $this->initDb(new Capsule);
     }
 
     // protected function logQueries($needLogging)
