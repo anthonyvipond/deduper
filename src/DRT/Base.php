@@ -1,0 +1,124 @@
+<?php namespace DRT;
+
+use Event;
+use DB;
+
+abstract class Base {
+
+    protected function outputDuplicateData($dupeTable, $columns)
+    {
+        $this->info('Counting total rows...');
+        $totalRows = DB::table($dupeTable)->count();
+        $this->feedback('`' . $dupeTable . '` has ' .  number_format($totalRows) . ' total rows');
+
+        $this->info('Counting unique rows');
+        $sql = 'DISTINCT ' . $this->ticks($columns);
+        $uniqueRows = DB::table($dupeTable)->count(DB::raw($sql));
+        $this->feedback('`' . $dupeTable . '` has ' .  number_format($uniqueRows) . ' unique rows');
+
+        $this->info('Counting duplicate rows');
+        $this->duplicateRows = $totalRows - $uniqueRows;
+        $this->feedback('`' . $dupeTable . '` has ' .  number_format($this->duplicateRows) . ' duplicate rows');
+    }
+
+    protected function noDuplicates($dupeTable, $columns)
+    {
+        $this->info('Don\'t worry buddy...');
+        print 'There are no duplicate rows in ' . $dupeTable . ' using these columns: ';
+        $this->comment($columns);
+        $this->bufferOutput(); die;
+    }
+
+    protected function backup($table, $backupTable = null, $cols = '*', $temp = false)
+    {
+        if ( ! $backupTable) $backupTable = $table . '_bak_' . time();
+
+        $this->createBackupTable($table, $backupTable, $cols);
+
+        $this->seedBackupTable($table, $backupTable, $cols);
+
+        if ($temp) $this->indexTable($backupTable);
+    }
+
+    protected function indexTable($table, $col = 'id')
+    {
+        $this->info('Indexing ' . $table . ' on ' . $col);
+        DB::statement('ALTER TABLE ' . $table . ' ADD PRIMARY KEY(id)');
+        $this->comment('Finished indexing.');
+    }
+
+    protected function createBackupTable($table, $backupTable, $cols)
+    {
+        $this->info('Creating backup table... (' . $backupTable . ')');
+        $sql = 'CREATE TABLE ' . $this->ticks($backupTable) . 
+               ' SELECT `id`,' . $this->ticks($cols) . ' FROM ' . $this->ticks($table) . ' LIMIT 0';
+        DB::statement($sql);
+    }
+
+    protected function seedBackupTable($table, $backupTable, $cols)
+    {
+        $this->info('Seeding backup table... (' . $backupTable . ')');
+
+        DB::statement('INSERT ' . $this->ticks($backupTable) . 
+                      ' SELECT `id`,' . $this->ticks($cols) . ' FROM ' . $this->ticks($table));
+    }
+
+    protected function idExists($id, $table)
+    {
+        $result = DB::selectOne('SELECT exists(SELECT 1 FROM ' . $table . ' where id=' . $id . ') as `exists`');
+
+        return (bool) $result->exists;
+    }
+
+    protected function getNextId($id, $table)
+    {
+        $result = DB::table($table)->select(DB::raw('min(id) as id'))->where('id', '>', $id)->first();
+
+        if (isset($result->id)) {
+            return $result->id;
+        }
+
+        return null;
+    }
+
+    protected function ticks($string)
+    {
+        $cols = explode(',', $string);
+
+        $string = implode('`,`', $cols);
+
+        return '`' . $string . '`';
+    }
+
+    protected function info($string)
+    {
+        $this->command->info($string);
+    }
+
+    protected function feedback($string)
+    {
+        print $string . PHP_EOL;
+    }
+
+    protected function comment($string)
+    {
+        $this->command->comment($string);
+    }
+
+    protected function bufferOutput()
+    {
+        print PHP_EOL . PHP_EOL;
+    }
+
+    protected function logQueries($needLogging)
+    {
+        if ($needLogging) {
+            Event::listen('illuminate.query', function($sql, $bindings, $time) {
+                $sql = str_replace(array('%', '?'), array('%%', '%s'), $sql);
+                $sql = vsprintf($sql, $bindings);
+                $this->comment($sql);
+            });
+        }
+    }
+
+}

@@ -1,0 +1,10 @@
+{
+    "require": {
+        "illuminate/database": "~4.2",
+        "symfony/console": "~2.0",
+        "symfony/process": "2.5.*"
+    },
+    "autoload": {
+        "classmap": ["src", "src/DRT"]
+    }
+}
