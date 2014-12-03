@@ -22,7 +22,7 @@ $app->register('dedupe')
         $table = $input->getArgument('table');
         $columns = explode(':', $input->getArgument('columns'));
 
-        $drt = new Dedupe($db);
+        $drt = new Dedupe($db, $output);
         $drt->dedupe($table, $columns);
     });
 
@@ -30,7 +30,6 @@ $app->run();
 
 
 // $output->writeln('hello');
-
 // use Illuminate\Database\Capsule\Manager as Capsule;
 //     Capsule::schema()->create('orders', function($table) {
 // });
