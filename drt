@@ -6,6 +6,7 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use DRT\Dedupe;
 
 require_once 'vendor/autoload.php';
@@ -17,12 +18,15 @@ $app->register('dedupe')
     ->setDescription('De-duplicate a table')
     ->addArgument('table', InputArgument::REQUIRED, 'The table to be deduped')
     ->addArgument('columns', InputArgument::REQUIRED, 'Colon seperated rows that define the uniqueness of a row')
+    ->addOption('backup', InputArgument::OPTIONAL, null, 'Whether a backup of the tables are needed or not')
     ->setCode(function(InputInterface $input, OutputInterface $output) use ($db) {
        
         $table = $input->getArgument('table');
         $columns = explode(':', $input->getArgument('columns'));
 
-        $drt = new Dedupe($db, $output);
+        $pdo = new \SimplePdo\SimplePdo(require __DIR__ . '/config/creds.php');
+
+        $drt = new Dedupe($db, $pdo, $output);
         $drt->dedupe($table, $columns);
     });
 

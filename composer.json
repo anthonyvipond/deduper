@@ -2,7 +2,8 @@
     "require": {
         "illuminate/database": "~4.2",
         "symfony/console": "~2.0",
-        "symfony/process": "2.5.*"
+        "symfony/process": "2.5.*",
+	"anthonyvipond/simple-pdo": "dev-master"
     },
     "autoload": {
         "classmap": ["src", "src/DRT"]

@@ -1,8 +1,8 @@
 <?php namespace DRT;
 
-// use Event;
+use Symfony\Component\Console\Command\Command;
 
-abstract class Base {
+abstract class Base extends Command {
 
     protected function outputDuplicateData($dupeTable, $columns)
     {
@@ -12,7 +12,9 @@ abstract class Base {
 
         $this->info('Counting unique rows');
         $sql = 'DISTINCT ' . $this->ticks($columns);
-        $uniqueRows = $this->db->table($dupeTable)->count($this->db->raw($sql));
+
+        $uniqueRows = $this->pdo->select('count(' . $sql . ') as uniques FROM ' . $dupeTable)->fetch()->uniques;
+        
         $this->feedback('`' . $dupeTable . '` has ' .  number_format($uniqueRows) . ' unique rows');
 
         $this->info('Counting duplicate rows');
@@ -41,7 +43,7 @@ abstract class Base {
     protected function indexTable($table, $col = 'id')
     {
         $this->info('Indexing ' . $table . ' on ' . $col);
-        $this->db->statement('ALTER TABLE ' . $table . ' ADD PRIMARY KEY(id)');
+        $this->pdo->statement('ALTER TABLE ' . $table . ' ADD PRIMARY KEY(id)');
         $this->comment('Finished indexing.');
     }
 
@@ -50,14 +52,14 @@ abstract class Base {
         $this->info('Creating backup table... (' . $backupTable . ')');
         $sql = 'CREATE TABLE ' . $this->ticks($backupTable) . 
                ' SELECT `id`,' . $this->ticks($cols) . ' FROM ' . $this->ticks($table) . ' LIMIT 0';
-        $this->db->statement($sql);
+        $this->pdo->statement($sql);
     }
 
     protected function seedBackupTable($table, $backupTable, $cols)
     {
         $this->info('Seeding backup table... (' . $backupTable . ')');
 
-        $this->db->statement('INSERT ' . $this->ticks($backupTable) . 
+        $this->pdo->statement('INSERT ' . $this->ticks($backupTable) . 
                       ' SELECT `id`,' . $this->ticks($cols) . ' FROM ' . $this->ticks($table));
     }
 
