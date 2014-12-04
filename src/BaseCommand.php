@@ -40,7 +40,10 @@ abstract class BaseCommand extends Command {
     {
         $backupTable = $table . '_bak';
 
-        if ($this->tableExists($backupTable)) $this->comment($backupTable . ' already exists. continuing...');
+        if ($this->tableExists($backupTable)) {
+            $this->comment($backupTable . ' already exists. continuing...');
+            return;
+        }
 
         $columns === '*' ? '*' : '`id`,' . $this->pdo->toTickCommaSeperated($columns);
 
@@ -63,7 +66,6 @@ abstract class BaseCommand extends Command {
         $sql = 'CREATE TABLE ' . $this->pdo->ticks($backupTable) . 
                ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($table) . ' LIMIT 0';
         
-        dd(11);
         $this->pdo->statement($sql);
     }
 
@@ -71,7 +73,7 @@ abstract class BaseCommand extends Command {
     {
         $this->info('Seeding backup table... (' . $backupTable . ')');
 
-        $sql = 'INSERT ' . $this->ticks($backupTable) . ' SELECT ' . $columns . ' FROM ' . $this->ticks($table);
+        $sql = 'INSERT ' . $this->pdo->ticks($backupTable) . ' SELECT ' . $columns . ' FROM ' . $this->pdo->ticks($table);
 
         $this->pdo->statement($sql);
     }
@@ -92,24 +94,25 @@ abstract class BaseCommand extends Command {
     {
         $result = $this->db->table($table)->select($this->db->raw('min(id) as id'))->where('id', '>', $id)->first();
 
-        if (isset($result->id)) {
-            return $result->id;
-        }
-
-        return null;
+        return isset($result->id) ? $result->id : null;
     }
 
     protected function dedupe($table, array $columns)
     {
-        foreach ($columns as $column) {
-            if ($this->pdo->isMySqlKeyword($column)) throw new SimplePdoException('`' . $column . '` is a MySQL keyword');
-        }
+        $this->validateColumns($columns);
 
         $columns = $this->pdo->toCommaSeperated($columns);
         
         $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $columns . ')';
 
         $this->pdo->statement($statement);
+    }
+
+    protected function validateColumns(array $columns)
+    {
+        foreach ($columns as $column) {
+            if ($this->pdo->isMySqlKeyword($column)) throw new SimplePdoException('`' . $column . '` is a MySQL keyword');
+        }
     }
 
     protected function feedback($string)

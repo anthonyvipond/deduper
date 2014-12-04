@@ -27,7 +27,11 @@ class DedupeCommand extends BaseCommand {
         $columns = explode(':', $input->getArgument('columns'));
 
         $this->outputDuplicateData($table, $columns);
-        if ($this->duplicateRows === 0) return $this->notifyNoDuplicates($table, $columns);
+
+        if ($this->duplicateRows === 0) {
+            $this->notifyNoDuplicates($table, $columns);
+            return;
+        }
 
         if ( ! $input->getOption('nobackups')) $this->backup($table);
 
