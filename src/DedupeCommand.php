@@ -15,7 +15,7 @@ class DedupeCommand extends BaseCommand {
              ->setDescription('De-duplicate a table')
              ->addArgument('table', InputArgument::REQUIRED, 'The table to be deduped')
              ->addArgument('columns', InputArgument::REQUIRED, 'Colon seperated rows that define the uniqueness of a row')
-             ->addOption('nobackups', InputOption::VALUE_OPTIONAL, null, 'Whether a backup of the tables are needed or not');
+             ->addOption('nobackups', InputOption::VALUE_OPTIONAL, null, 'Whether a backup of the table is needed or not');
     }
 
     public function execute(InputInterface $input, OutputInterface $output)

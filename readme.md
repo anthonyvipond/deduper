@@ -1,4 +1,4 @@
-Database Deduper
+Database Dedupe and Remap Tool
 ======================
 
 Purpose
@@ -159,6 +159,12 @@ id | year | team_id |
 2  | 2005 | 2
 3  | 2006 | 2
 4  | 2007 | 2
+
+Contribution Guidelines
+------------
+
+- I'm happy to code with you!
+- Fork and make a pull request
 
 Notes
 ------------
