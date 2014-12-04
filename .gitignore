@@ -2,3 +2,4 @@
 composer.lock
 /config/database.php
 ignore.php
+*pos.txt

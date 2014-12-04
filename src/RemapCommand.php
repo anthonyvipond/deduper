@@ -39,6 +39,9 @@ class RemapCommand extends DedupeCommand {
 
         $removalsTable = $dupesTable . '_removals';
         $this->createTableStructure($dupesTable, $removalsTable, array_unshift($columns, 'id')); 
+        
+        // add a new column removals table "new_id"
+        $this->addNewColumn($removalsTable, 'new_id');
 
         // the dupesTable was deduplicated, so now its the uniques table!
         $uniquesTable = $dupesTable;
@@ -47,7 +50,20 @@ class RemapCommand extends DedupeCommand {
         // insert the diff to the $removalsTable
         $this->comment('Populating removals table');
         $this->insertDiffToNewTable($uniquesTable, $this->tableWithDupes, $removalsTable, $columns);
-        $this->comment('Populating of removals table completed');
+        $this->feedback('Populating of removals table completed');
+
+
+        $this->comment('Updating removals table with new id');
+        $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable);
+        $this->feedback('Completed updating removals table');
+    }
+
+    protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable)
+    {
+        $sql = 'UPDATE ' . $removalsTable . ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id 
+                WHERE ' . $uniquesTable . '.id = ' . $removalsTable . '.id';
+
+        $this->pdo->statement($sql);
     }
 
     protected function insertDiffToNewTable($uniquesTable, $dupesTable, $removalsTable, array $columns)

@@ -106,6 +106,13 @@ abstract class BaseCommand extends Command {
         return isset($result->id) ? $result->id : null;
     }
 
+    protected function addNewColumn($table, $column)
+    {
+        $sql = 'ALTER TABLE ' . $table . ' ADD ' . $column . ' int(11)';
+
+        $this->pdo->statement($sql);
+    }
+
     protected function dedupe($table, array $columns)
     {
         $commaColumns = $this->pdo->toCommaSeperated($columns);
