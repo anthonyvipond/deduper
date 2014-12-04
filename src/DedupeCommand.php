@@ -23,18 +23,13 @@ class DedupeCommand extends BaseCommand {
         $this->init($output);
         
         $table = $input->getArgument('table');
-        $backupRequired = $input->getOption('nobackups');
 
         $columns = explode(':', $input->getArgument('columns'));
 
         $this->outputDuplicateData($table, $columns);
+        if ($this->duplicateRows === 0) return $this->notifyNoDuplicates($table, $columns);
 
-        if ($this->duplicateRows === 0) {
-            $this->notifyNoDuplicates($table, $columns);
-            return;
-        }
-
-        if ($backupRequired) $this->backup($table);
+        if ( ! $input->getOption('nobackups')) $this->backup($table);
 
         $this->info('Removing duplicates from original. Please hold...');
 

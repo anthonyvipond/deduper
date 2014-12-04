@@ -35,16 +35,14 @@ abstract class BaseCommand extends Command {
         print 'There are no duplicate rows in ' . $dupeTable . ' using these columns: ';
         $this->comment($this->pdo->toCommaSeperated($columns));
     }
-    
+
     protected function backup($table, $columns = '*')
     {
-        $backupTable = $table . '_bak_';
+        $backupTable = $table . '_bak';
 
-        if ($this->tableExists($backupTable)) {
-            $this->comment($backupTable . ' already exists. continuing...');
-        }
+        if ($this->tableExists($backupTable)) $this->comment($backupTable . ' already exists. continuing...');
 
-        $columns === '*' ? '*' : `id, ` . $this->ticks($columns);
+        $columns === '*' ? '*' : '`id`,' . $this->pdo->toTickCommaSeperated($columns);
 
         $this->createBackupTable($table, $backupTable, $columns);
 
@@ -62,8 +60,10 @@ abstract class BaseCommand extends Command {
     {
         $this->info('Creating backup table... (' . $backupTable . ')');
 
-        $sql = 'CREATE TABLE ' . $this->ticks($backupTable) . ' SELECT ' . $columns  . ' FROM ' . $this->ticks($table) . ' LIMIT 0';
+        $sql = 'CREATE TABLE ' . $this->pdo->ticks($backupTable) . 
+               ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($table) . ' LIMIT 0';
         
+        dd(11);
         $this->pdo->statement($sql);
     }
 
@@ -85,7 +85,7 @@ abstract class BaseCommand extends Command {
 
     protected function tableExists($table)
     {
-        return gettype($dbh->exec('SELECT count(*) FROM ' . $table)) === 'integer';
+        return is_int($this->pdo->tableExists('count(*) as rows FROM ' . $this->pdo->ticks($table)));
     }
 
     protected function getNextId($id, $table)
