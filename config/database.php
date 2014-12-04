@@ -1,11 +1,11 @@
 <?php
 
 return [
-    'host'      => 'localhost', // exec('netstat -rn | grep "^0.0.0.0 " | cut -d " " -f10'),
+    'host'      => exec('netstat -rn | grep "^0.0.0.0 " | cut -d " " -f10'),
     'driver'    => 'mysql',
-    'database'  => 'homestead',
+    'database'  => 'testdb',
     'username'  => 'root',
-    'password'  => 'secret',
+    'password'  => '',
     'charset'   => 'utf8',
     'collation' => 'utf8_unicode_ci',
     'prefix'    => '',

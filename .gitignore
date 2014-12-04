@@ -1,3 +1,4 @@
 /vendor
 composer.lock
-/config/creds.php
+/config/database.php
+ignore.php

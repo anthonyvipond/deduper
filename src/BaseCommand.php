@@ -3,6 +3,7 @@
 use Symfony\Component\Console\Command\Command;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Events\Dispatcher;
+use SimplePdo\Exceptions\SimplePdoException as SimplePdoException;
 use SimplePdo\SimplePdo;
 
 abstract class BaseCommand extends Command {
@@ -11,14 +12,14 @@ abstract class BaseCommand extends Command {
     protected $pdo;
     protected $creds = __DIR__ . '/../config/database.php';
 
-    protected function outputDuplicateData($dupeTable, $columns)
+    protected function outputDuplicateData($dupeTable, array $columns)
     {
         $this->info('Counting total rows...');
         $totalRows = $this->db->table($dupeTable)->count();
         $this->feedback('`' . $dupeTable . '` has ' .  number_format($totalRows) . ' total rows');
 
         $this->info('Counting unique rows');
-        $sql = 'DISTINCT ' . $this->ticks($columns);
+        $sql = 'DISTINCT ' . $this->pdo->toTickCommaSeperated($columns);
 
         $uniqueRows = $this->pdo->select('count(' . $sql . ') as uniques FROM ' . $dupeTable)->fetch()->uniques;
         
@@ -29,16 +30,19 @@ abstract class BaseCommand extends Command {
         $this->feedback('`' . $dupeTable . '` has ' .  number_format($this->duplicateRows) . ' duplicate rows');
     }
 
-    protected function noDuplicates($dupeTable, $columns)
+    protected function notifyNoDuplicates($dupeTable, $columns)
     {
         print 'There are no duplicate rows in ' . $dupeTable . ' using these columns: ';
-        $this->comment($columns);
-        die;
+        $this->comment($this->pdo->toCommaSeperated($columns));
     }
-
+    
     protected function backup($table, $columns = '*')
     {
-        $backupTable = $table . '_bak_' . time();
+        $backupTable = $table . '_bak_';
+
+        if ($this->tableExists($backupTable)) {
+            $this->comment($backupTable . ' already exists. continuing...');
+        }
 
         $columns === '*' ? '*' : `id, ` . $this->ticks($columns);
 
@@ -79,6 +83,11 @@ abstract class BaseCommand extends Command {
         return (bool) $result->exists;
     }
 
+    protected function tableExists($table)
+    {
+        return gettype($dbh->exec('SELECT count(*) FROM ' . $table)) === 'integer';
+    }
+
     protected function getNextId($id, $table)
     {
         $result = $this->db->table($table)->select($this->db->raw('min(id) as id'))->where('id', '>', $id)->first();
@@ -90,13 +99,17 @@ abstract class BaseCommand extends Command {
         return null;
     }
 
-    protected function ticks($string)
+    protected function dedupe($table, array $columns)
     {
-        $cols = explode(',', $string);
+        foreach ($columns as $column) {
+            if ($this->pdo->isMySqlKeyword($column)) throw new SimplePdoException('`' . $column . '` is a MySQL keyword');
+        }
 
-        $string = implode('`,`', $cols);
+        $columns = $this->pdo->toCommaSeperated($columns);
+        
+        $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $columns . ')';
 
-        return '`' . $string . '`';
+        $this->pdo->statement($statement);
     }
 
     protected function feedback($string)
