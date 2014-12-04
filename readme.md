@@ -1,4 +1,4 @@
-Laravel Deduper
+Database Deduper
 ======================
 
 Purpose
@@ -20,7 +20,7 @@ Edit `composer.json` and add:
 ```json
 {
     "require": {
-        "anthonyvipond/deduper-laravel": "dev-master"
+        "anthonyvipond/deduper": "dev-master"
     }
 }
 ```
