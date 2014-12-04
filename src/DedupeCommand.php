@@ -9,24 +9,33 @@ use Symfony\Component\Console\Input\InputOption;
 
 class DedupeCommand extends BaseCommand {
 
+    protected $needBackup;
+
     public function configure()
     {
         $this->setName('dedupe')
              ->setDescription('De-duplicate a table')
              ->addArgument('table', InputArgument::REQUIRED, 'The table to be deduped')
              ->addArgument('columns', InputArgument::REQUIRED, 'Colon seperated rows that define the uniqueness of a row')
-             ->addOption('nobackups', InputOption::VALUE_OPTIONAL, null, 'Whether a backup of the table is needed or not');
+             ->addOption('backups', null, InputOption::VALUE_OPTIONAL, 'Whether a backup of the table is needed or not', true);
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
         $this->init($output);
-        
-        $table = $input->getArgument('table');
 
-        $columns = explode(':', $input->getArgument('columns'));
+        $needBackup = $input->getOption('backups') === 'false' ? false : true;
 
-        $this->validateColumns($columns);
+        $this->deduplicateTable(
+            $input->getArgument('table'), 
+            explode(':', $input->getArgument('columns')),
+            $needBackup
+        );
+    }
+
+    public function deduplicateTable($table, array $columns)
+    {
+        $this->validateColumnsAndSetPurgeMode($columns);
 
         $this->outputDuplicateData($table, $columns);
 
@@ -35,7 +44,8 @@ class DedupeCommand extends BaseCommand {
             return;
         }
 
-        if ( ! $input->getOption('nobackups') && $this->purgeMode == 'alter') $this->backup($table);
+        // if purge mode isn't alter, a backup will be created anyways
+        if ($this->purgeMode == 'alter') $this->backup($table);
 
         $this->info('Removing duplicates from original. Please hold...');
 

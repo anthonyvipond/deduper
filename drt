@@ -5,6 +5,7 @@
 use Symfony\Component\Console\Application;
 use DRT\DedupeCommand;
 use DRT\RemapCommand;
+use DRT\TestCommand;
 
 require_once 'vendor/autoload.php';
 
@@ -12,6 +13,7 @@ $app = new Application('Dedupe and Remap Tool (DRT)', '1.0');
 
 $app->add(new DedupeCommand);
 $app->add(new RemapCommand);
+$app->add(new TestCommand);
 
 $app->run();
 

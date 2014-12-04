@@ -96,12 +96,12 @@ id | firstname | lastname
 Already have your table backed up? You can pass a **no backups** flag. It creates backups by default.
 
 ```
-./drt dedupe tableName name --nobackups
+./drt dedupe tableName name --backups=false
 ```
 
 If you don't want to see SQL queries being run, pass an --hidesql flag. It's shows SQL by default.
 ```
-./drt dedupe tableName name --nobackups --hidesql
+./drt dedupe tableName name --backups=false --hidesql
 ```
 
 ----------------------------

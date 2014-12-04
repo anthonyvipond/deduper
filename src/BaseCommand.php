@@ -20,15 +20,17 @@ abstract class BaseCommand extends Command {
         $this->feedback('`' . $dupeTable . '` has ' .  number_format($totalRows) . ' total rows');
 
         $this->info('Counting unique rows');
-        $sql = 'DISTINCT ' . $this->pdo->toTickCommaSeperated($columns);
-
-        $uniqueRows = $this->pdo->select('count(' . $sql . ') as uniques FROM ' . $dupeTable)->fetch()->uniques;
-        
+        $uniqueRows = $this->countUniqueRows($dupeTable, $columns);
         $this->feedback('`' . $dupeTable . '` has ' .  number_format($uniqueRows) . ' unique rows');
 
-        $this->info('Counting duplicate rows');
         $this->duplicateRows = $totalRows - $uniqueRows;
-        $this->feedback('`' . $dupeTable . '` has ' .  number_format($this->duplicateRows) . ' duplicate rows');
+    }
+
+    protected function countUniqueRows($dupeTable, $columns)
+    {
+        $sql = 'DISTINCT ' . $this->pdo->toTickCommaSeperated($columns);
+        
+        return $this->pdo->select('count(' . $sql . ') as uniques FROM ' . $dupeTable)->fetch()->uniques;
     }
 
     protected function notifyNoDuplicates($dupeTable, $columns)
@@ -114,7 +116,7 @@ abstract class BaseCommand extends Command {
         }
     }
 
-    protected function validateColumns(array $columns)
+    protected function validateColumnsAndSetPurgeMode(array $columns)
     {
         foreach ($columns as $column) {
             if ($this->pdo->isMySqlKeyword($column)) {
