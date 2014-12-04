@@ -1,4 +1,14 @@
 {
+    "name": "anthonyvipond/deduper",
+    "description": "Deduplicate and remap your database tables",
+    "keywords"    : ["dedupe", "deduplicate", "database", "remap"],
+    "license"     : "MIT",
+    "authors": [
+        {
+            "name": "Anthony Vipond",
+            "email": "anthonytrading81@gmail.com"
+        }
+    ],
     "require": {
         "illuminate/database": "~4.2",
         "symfony/console": "~2.0",

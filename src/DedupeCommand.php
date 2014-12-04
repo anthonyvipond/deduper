@@ -15,7 +15,7 @@ class DedupeCommand extends BaseCommand {
              ->setDescription('De-duplicate a table')
              ->addArgument('table', InputArgument::REQUIRED, 'The table to be deduped')
              ->addArgument('columns', InputArgument::REQUIRED, 'Colon seperated rows that define the uniqueness of a row')
-             ->addOption('backup', InputArgument::OPTIONAL, null, 'Whether a backup of the tables are needed or not');
+             ->addOption('nobackups', InputOption::VALUE_OPTIONAL, null, 'Whether a backup of the tables are needed or not');
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
@@ -23,6 +23,8 @@ class DedupeCommand extends BaseCommand {
         $this->init($output);
         
         $table = $input->getArgument('table');
+        $backupsRequired = $input->getOption('nobackups');
+
         $columnsArray = explode(':', $input->getArgument('columns'));
         $columns = implode(',', $columnsArray);
 
@@ -32,18 +34,18 @@ class DedupeCommand extends BaseCommand {
             $this->noDuplicates($table, $columns);
         }
 
-        if ($backup !== false) {
-            $this->backup($table, null, $columns);
+        if ($backupsRequired) {
+            $this->backup($table);
         }
 
         $this->info('Removing duplicates from original. Please hold...');
         $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $columns . ')';
 
-        $pdo->statement($statement);
+        $this->pdo->statement($statement);
         $this->feedback('Dedupe completed.');
 
         $this->info('Restoring original table schema...');
-        $pdo->statement('ALTER TABLE ' . $table . ' DROP INDEX idx_dedupe;');
+        $this->pdo->statement('ALTER TABLE ' . $table . ' DROP INDEX idx_dedupe;');
         $this->feedback('Schema restored.');
 
         $this->info('Recounting total rows...');

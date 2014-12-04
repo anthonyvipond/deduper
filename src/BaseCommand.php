@@ -36,15 +36,15 @@ abstract class BaseCommand extends Command {
         die;
     }
 
-    protected function backup($table, $backupTable = null, $cols = '*', $temp = false)
+    protected function backup($table, $columns = '*')
     {
-        if ( ! $backupTable) $backupTable = $table . '_bak_' . time();
+        $backupTable = $table . '_bak_' . time();
 
-        $this->createBackupTable($table, $backupTable, $cols);
+        $columns === '*' ? '*' : `id, ` . $this->ticks($columns);
 
-        $this->seedBackupTable($table, $backupTable, $cols);
+        $this->createBackupTable($table, $backupTable, $columns);
 
-        if ($temp) $this->indexTable($backupTable);
+        $this->seedBackupTable($table, $backupTable, $columns);
     }
 
     protected function indexTable($table, $col = 'id')
@@ -54,20 +54,22 @@ abstract class BaseCommand extends Command {
         $this->comment('Finished indexing.');
     }
 
-    protected function createBackupTable($table, $backupTable, $cols)
+    protected function createBackupTable($table, $backupTable, $columns)
     {
         $this->info('Creating backup table... (' . $backupTable . ')');
-        $sql = 'CREATE TABLE ' . $this->ticks($backupTable) . 
-               ' SELECT `id`,' . $this->ticks($cols) . ' FROM ' . $this->ticks($table) . ' LIMIT 0';
+
+        $sql = 'CREATE TABLE ' . $this->ticks($backupTable) . ' SELECT ' . $columns  . ' FROM ' . $this->ticks($table) . ' LIMIT 0';
+        
         $this->pdo->statement($sql);
     }
 
-    protected function seedBackupTable($table, $backupTable, $cols)
+    protected function seedBackupTable($table, $backupTable, $columns)
     {
         $this->info('Seeding backup table... (' . $backupTable . ')');
 
-        $this->pdo->statement('INSERT ' . $this->ticks($backupTable) . 
-                      ' SELECT `id`,' . $this->ticks($cols) . ' FROM ' . $this->ticks($table));
+        $sql = 'INSERT ' . $this->ticks($backupTable) . ' SELECT ' . $columns . ' FROM ' . $this->ticks($table);
+
+        $this->pdo->statement($sql);
     }
 
     protected function idExists($id, $table)

@@ -4,7 +4,7 @@ Laravel Deduper
 Purpose
 ------------
 
-A custom Artisan command removes duplicate records from your MySQL database table.
+A custom command removes duplicate records from your database table.
 
 You can easily define the uniqueness of a row using one or more columns.
 
@@ -31,19 +31,9 @@ And install dependencies:
     composer install
 ```
 
-Find the `providers` key in `app/config/app.php` and register the **Deduper Service Provider**.
-
-```php
-'providers' => array(
-    // ...
-
-    'Vipond\Deduper\DeduperServiceProvider',
-)
+You should now type the command from the directory
 ```
-
-You should now see the command
-```
-php artisan list
+./drt
 ```
 
 **Removes duplicates from your table based on an array of columns defining a row's uniqueness**
@@ -64,7 +54,7 @@ id | name
 7  | Joseph
 
 ```
-php artisan deduper:dedupe tableName name
+./drt dedupe tableName name
 ```
 
 You will get your original table backed up, and your table will become this:
@@ -90,7 +80,7 @@ id | firstname | lastname
 Then seperate the columns with a `:` in the second argument:
 
 ```
-php artisan deduper:dedupe tableName firstname:lastname
+./drt dedupe tableName firstname:lastname
 ```
 
 You will get this:
@@ -103,15 +93,15 @@ id | firstname | lastname
 
 ----------------------------
 
-Already have your table backed up? You can pass a **no backup** flag. It's true by default.
+Already have your table backed up? You can pass a **no backups** flag. It creates backups by default.
 
 ```
-php artisan deduper:dedupe tableName name --backup=false
+./drt dedupe tableName name --nobackups
 ```
 
-If you don't want to see SQL queries being run, pass an --sql flag. It's true by default.
+If you don't want to see SQL queries being run, pass an --hidesql flag. It's shows SQL by default.
 ```
-php artisan deduper:dedupe tableName name --backup=false --sql=false
+./drt dedupe tableName name --nobackups --hidesql
 ```
 
 ----------------------------
@@ -141,16 +131,16 @@ The `champions` table links to various different Knicks records, but the Knicks 
 The solution is deduplicating and remapping. Look closely:
 
 ```
-php artisan deduper:remap remapTable duplicatesTable team --duplicatesColumn=id --remapFkColumn=team_id
+./drt remap remapTable duplicatesTable team --duplicatesColumn=id --remapFkColumn=team_id
 ```
 
 Like the basic dedupe command, you can also specify multiple columns to define row uniqueness.
 
 ```
-php artisan deduper:remap remapTable duplicatesTable firstname:lastname:birthday --duplicatesColumn=id --remapFkColumn=employee_id
+./drt remap remapTable duplicatesTable firstname:lastname:birthday --duplicatesColumn=id --remapFkColumn=employee_id
 ```
 
-By default both tables will be backed up for you. Disable this by passing a `--backup=false` flag
+By default both tables will be backed up for you. Disable this by passing a `--nobackups` flag
 
 And here is your result of running the first dedupe command:
 
@@ -173,5 +163,5 @@ id | year | team_id |
 Notes
 ------------
 
-- As of right now, to use `deduper:remap` both duplicates and remap table must have an `id` column
-- Only tested on MySQL, feel free to make pull requests so it works on other DBMS'
+- As of right now, to use `./drt remap` both duplicates and remap table must have an `id` column
+- Only tested on MySQL
