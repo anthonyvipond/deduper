@@ -11,6 +11,7 @@ abstract class BaseCommand extends Command {
     protected $db;
     protected $pdo;
     protected $creds = __DIR__ . '/../config/database.php';
+    protected $purgeMode = 'alter';
 
     protected function outputDuplicateData($dupeTable, array $columns)
     {
@@ -38,7 +39,7 @@ abstract class BaseCommand extends Command {
 
     protected function backup($table, $columns = '*')
     {
-        $backupTable = $table . '_bak';
+        $backupTable = $table . '_with_dupes';
 
         if ($this->tableExists($backupTable)) {
             $this->comment($backupTable . ' already exists. continuing...');
@@ -61,7 +62,7 @@ abstract class BaseCommand extends Command {
 
     protected function createBackupTable($table, $backupTable, $columns)
     {
-        $this->info('Creating backup table... (' . $backupTable . ')');
+        $this->info('Backing up table... (' . $backupTable . ')');
 
         $sql = 'CREATE TABLE ' . $this->pdo->ticks($backupTable) . 
                ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($table) . ' LIMIT 0';
@@ -71,9 +72,9 @@ abstract class BaseCommand extends Command {
 
     protected function seedBackupTable($table, $backupTable, $columns)
     {
-        $this->info('Seeding backup table... (' . $backupTable . ')');
-
         $sql = 'INSERT ' . $this->pdo->ticks($backupTable) . ' SELECT ' . $columns . ' FROM ' . $this->pdo->ticks($table);
+
+        $this->feedback('Backed up table: (' . $backupTable . ')');
 
         $this->pdo->statement($sql);
     }
@@ -99,19 +100,27 @@ abstract class BaseCommand extends Command {
 
     protected function dedupe($table, array $columns)
     {
-        $this->validateColumns($columns);
+        $commaColumns = $this->pdo->toCommaSeperated($columns);
+        $tickColumns = $this->pdo->toTickCommaSeperated($columns);
 
-        $columns = $this->pdo->toCommaSeperated($columns);
-        
-        $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $columns . ')';
-
-        $this->pdo->statement($statement);
+        if ($this->purgeMode == 'alter') {
+            $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $commaColumns . ')';
+            $this->pdo->statement($statement);
+        } else {
+            $this->pdo->statement('CREATE TABLE ' . $table . '_deduped LIKE ' . $table);
+            $this->pdo->statement('INSERT ' . $table . '_deduped SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
+            $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $table . '_with_dupes');
+            $this->pdo->statement('RENAME TABLE ' .  $table . '_deduped TO ' . $table);
+        }
     }
 
     protected function validateColumns(array $columns)
     {
         foreach ($columns as $column) {
-            if ($this->pdo->isMySqlKeyword($column)) throw new SimplePdoException('`' . $column . '` is a MySQL keyword');
+            if ($this->pdo->isMySqlKeyword($column)) {
+                $this->comment('`' . $column . '` is a MySQL keyword. Bad column name, buddy.');
+                $this->purgeMode = 'groupBy';
+            }
         }
     }
 

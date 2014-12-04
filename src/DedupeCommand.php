@@ -26,6 +26,8 @@ class DedupeCommand extends BaseCommand {
 
         $columns = explode(':', $input->getArgument('columns'));
 
+        $this->validateColumns($columns);
+
         $this->outputDuplicateData($table, $columns);
 
         if ($this->duplicateRows === 0) {
@@ -33,7 +35,7 @@ class DedupeCommand extends BaseCommand {
             return;
         }
 
-        if ( ! $input->getOption('nobackups')) $this->backup($table);
+        if ( ! $input->getOption('nobackups') && $this->purgeMode == 'alter') $this->backup($table);
 
         $this->info('Removing duplicates from original. Please hold...');
 
@@ -41,15 +43,17 @@ class DedupeCommand extends BaseCommand {
         
         $this->feedback('Dedupe completed.');
 
-        $this->info('Restoring original table schema...');
-
-        $this->pdo->statement('ALTER TABLE ' . $table . ' DROP INDEX idx_dedupe;');
-        $this->feedback('Schema restored.');
+        if ($this->purgeMode == 'alter') {
+            $this->info('Restoring original table schema...');
+            $this->pdo->statement('ALTER TABLE ' . $table . ' DROP INDEX idx_dedupe;');
+            $this->feedback('Schema restored.');
+        }
 
         $this->info('Recounting total rows...');
         $total = $this->db->table($table)->count();
 
-        print 'There are now ' . $total . ' total rows in ' . $this->comment($table);
+        print 'There are now ' . $total . ' total rows in ';
+        $this->comment($table);
     }
 
 }
