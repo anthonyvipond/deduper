@@ -36,6 +36,29 @@ class RemapCommand extends DedupeCommand {
         $posFileHandle = $this->findOrCreatePositionFile($dupesTable, $remapTable);
 
         $this->deduplicateTable($dupesTable, $columns);
+
+        $removalsTable = $dupesTable . '_removals';
+        $this->createTableStructure($dupesTable, $removalsTable, $columns);
+
+        // the dupesTable was deduplicated, so now its the uniques table!
+        $uniquesTable = $dupesTable;
+        unset($dupesTable);
+
+        // insert the diff to the $removalsTable
+        $this->comment('Populating removals table');
+        $this->insertDiffToNewTable($uniquesTable, $this->tableWithDupes, $removalsTable, $columns);
+        $this->comment('Populating of removals table completed');
+    }
+
+    protected function insertDiffToNewTable($uniquesTable, $dupesTable, $removalsTable, array $columns)
+    {
+        $columns = $this->pdo->toTickCommaSeperated($columns);
+        
+        $selectSql = 'SELECT ' . $columns . ' FROM ' . $dupesTable . ' WHERE `id` NOT IN (SELECT id FROM ' . $uniquesTable . ')';
+        
+        $sql = 'INSERT INTO ' . $removalsTable . ' ' . $selectSql;
+
+        $this->pdo->statement($sql);
     }
 
     protected function findOrCreatePositionFile($dupesTable, $remapTable)

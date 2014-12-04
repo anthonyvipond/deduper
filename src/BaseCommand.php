@@ -16,14 +16,14 @@ abstract class BaseCommand extends Command {
     protected function outputDuplicateData($dupeTable, array $columns)
     {
         $this->info('Counting total rows...');
-        $totalRows = $this->db->table($dupeTable)->count();
-        $this->feedback('`' . $dupeTable . '` has ' .  number_format($totalRows) . ' total rows');
+        $this->totalRows = $this->db->table($dupeTable)->count();
+        $this->feedback('`' . $dupeTable . '` has ' .  number_format($this->totalRows) . ' total rows');
 
         $this->info('Counting unique rows');
         $uniqueRows = $this->countUniqueRows($dupeTable, $columns);
         $this->feedback('`' . $dupeTable . '` has ' .  number_format($uniqueRows) . ' unique rows');
 
-        $this->duplicateRows = $totalRows - $uniqueRows;
+        $this->duplicateRows = $this->totalRows - $uniqueRows;
     }
 
     protected function countUniqueRows($dupeTable, $columns)
@@ -44,15 +44,17 @@ abstract class BaseCommand extends Command {
         $backupTable = $table . '_with_dupes';
 
         if ($this->tableExists($backupTable)) {
-            $this->comment($backupTable . ' already exists. continuing...');
+            $this->comment($this->backupTable . ' already exists. continuing...');
             return;
         }
 
         $columns === '*' ? '*' : '`id`,' . $this->pdo->toTickCommaSeperated($columns);
 
-        $this->createBackupTable($table, $backupTable, $columns);
+        $this->info('Backing up table... (' . $backupTable . ')');
+        $this->createTableStructure($table, $backupTable, $columns);
 
-        $this->seedBackupTable($table, $backupTable, $columns);
+        $this->seedTable($table, $backupTable, $columns);
+        $this->feedback('Backed up table: (' . $backupTable . ')');
     }
 
     protected function indexTable($table, $col = 'id')
@@ -62,23 +64,28 @@ abstract class BaseCommand extends Command {
         $this->comment('Finished indexing.');
     }
 
-    protected function createBackupTable($table, $backupTable, $columns)
+    protected function createTableStructure($tableName, $newTableName, $columns)
     {
-        $this->info('Backing up table... (' . $backupTable . ')');
+        if (is_array($columns)) {
+            $columns = $this->pdo->toTickCommaSeperated($columns);
+        }
 
-        $sql = 'CREATE TABLE ' . $this->pdo->ticks($backupTable) . 
-               ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($table) . ' LIMIT 0';
+        $sql = 'CREATE TABLE ' . $this->pdo->ticks($newTableName) . 
+               ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($tableName) . ' LIMIT 0';
         
         $this->pdo->statement($sql);
     }
 
-    protected function seedBackupTable($table, $backupTable, $columns)
+    protected function seedTable($sourceTable, $targetTable, $columns)
     {
-        $sql = 'INSERT ' . $this->pdo->ticks($backupTable) . ' SELECT ' . $columns . ' FROM ' . $this->pdo->ticks($table);
+        if (is_array($columns)) $columns = $this->pdo->toTickCommaSeperated($columns);
 
-        $this->feedback('Backed up table: (' . $backupTable . ')');
+        $sql = 'INSERT ' . $this->pdo->ticks($targetTable) . ' SELECT ' . $columns . ' FROM ' . $this->pdo->ticks($sourceTable);
 
         $this->pdo->statement($sql);
+
+        // the target table is now the one holding duplicates
+        $this->tableWithDupes = $targetTable;
     }
 
     protected function idExists($id, $table)
