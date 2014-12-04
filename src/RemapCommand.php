@@ -38,7 +38,7 @@ class RemapCommand extends DedupeCommand {
         $this->deduplicateTable($dupesTable, $columns);
 
         $removalsTable = $dupesTable . '_removals';
-        $this->createTableStructure($dupesTable, $removalsTable, $columns);
+        $this->createTableStructure($dupesTable, $removalsTable, array_unshift($columns, 'id')); 
 
         // the dupesTable was deduplicated, so now its the uniques table!
         $uniquesTable = $dupesTable;

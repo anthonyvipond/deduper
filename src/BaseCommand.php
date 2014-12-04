@@ -64,14 +64,16 @@ abstract class BaseCommand extends Command {
         $this->comment('Finished indexing.');
     }
 
-    protected function createTableStructure($tableName, $newTableName, $columns)
+    protected function createTableStructure($tableName, $newTableName, $columns = array())
     {
-        if (is_array($columns)) {
-            $columns = $this->pdo->toTickCommaSeperated($columns);
-        }
+        // if ( ! empty($columns)) {
+        //     $columns = $this->pdo->toTickCommaSeperated($columns);
+        // }
 
-        $sql = 'CREATE TABLE ' . $this->pdo->ticks($newTableName) . 
-               ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($tableName) . ' LIMIT 0';
+        // $sql = 'CREATE TABLE ' . $this->pdo->ticks($newTableName) . 
+        //        ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($tableName) . ' LIMIT 0';
+
+        $sql = 'CREATE TABLE ' . $this->pdo->ticks($newTableName) . ' LIKE ' . $this->pdo->ticks($tableName);
         
         $this->pdo->statement($sql);
     }
@@ -83,9 +85,6 @@ abstract class BaseCommand extends Command {
         $sql = 'INSERT ' . $this->pdo->ticks($targetTable) . ' SELECT ' . $columns . ' FROM ' . $this->pdo->ticks($sourceTable);
 
         $this->pdo->statement($sql);
-
-        // the target table is now the one holding duplicates
-        $this->tableWithDupes = $targetTable;
     }
 
     protected function idExists($id, $table)
@@ -120,6 +119,9 @@ abstract class BaseCommand extends Command {
             $this->pdo->statement('INSERT ' . $table . '_deduped SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
             $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $table . '_with_dupes');
             $this->pdo->statement('RENAME TABLE ' .  $table . '_deduped TO ' . $table);
+
+            // the target table is now the one holding duplicates
+            $this->tableWithDupes = $table . '_with_dupes';
         }
     }
 

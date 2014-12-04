@@ -1,6 +1,6 @@
 <?php
 
-return [
+$smallDb = [
     'host'      => exec('netstat -rn | grep "^0.0.0.0 " | cut -d " " -f10'),
     'driver'    => 'mysql',
     'database'  => 'testdb',
@@ -10,3 +10,7 @@ return [
     'collation' => 'utf8_unicode_ci',
     'prefix'    => '',
 ];
+
+$bigDb = array_merge($smallDb, ['database' => 'juwai_staging']);
+
+return $bigDb;
