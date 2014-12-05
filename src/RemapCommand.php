@@ -20,18 +20,29 @@ class RemapCommand extends DedupeCommand {
              ->addOption('dupesParentKey', null, InputOption::VALUE_REQUIRED, 'The parent key on dupes table. Usually id')
              ->addOption('remapFk', null, InputOption::VALUE_REQUIRED, 'The foreign key on the remap table getting remapped')
              ->addOption('startId', null, InputOption::VALUE_OPTIONAL, 'Where to start remapping from on the junk table', 1)
-             ->addOption('backups', null, InputOption::VALUE_OPTIONAL, 'Whether a backup of the tables are needed or not', true);
+             ->addOption('backups', null, InputOption::VALUE_OPTIONAL, 'Whether a backup of the tables are needed or not', true)
+             ->addOption('testMode', null, InputOption::VALUE_OPTIONAL, 'Whether a backup of the tables are needed or not', false);
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
         $needBackup = $input->getOption('backups') === 'false' ? false : true;
+        $testMode   = $input->getOption('testMode') === 'true' ? true : false;
 
         $this->init($output);
 
         $dupesTable = $input->getArgument('dupesTable');
         $remapTable = $input->getArgument('remapTable');
         $columns = explode(':', $input->getArgument('columns'));
+
+        if ($testMode) {
+            $this->pdo->statement('DROP TABLE ' . $dupesTable);
+            $this->pdo->statement('DROP TABLE ' . $dupesTable . '_removals');
+            $this->pdo->statement('CREATE TABLE ' . $dupesTable . ' LIKE ' . $dupesTable . '_with_dupes');
+            $this->comment('Create dupes table and removing old ones...');
+            $this->pdo->statement('INSERT ' . $dupesTable . ' SELECT * FROM ' . $dupesTable . '_with_dupes');
+            $this->pdo->statement('DROP TABLE ' . $dupesTable . '_with_dupes');
+        }
 
         $posFileHandle = $this->findOrCreatePositionFile($dupesTable, $remapTable);
 
@@ -52,6 +63,8 @@ class RemapCommand extends DedupeCommand {
         $this->insertDiffToNewTable($uniquesTable, $this->tableWithDupes, $removalsTable, $columns);
         $this->feedback('Populating of removals table completed');
 
+        // remove id from columns
+        // array_shift($columns);
 
         $this->comment('Updating removals table with new id');
         $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
@@ -60,22 +73,38 @@ class RemapCommand extends DedupeCommand {
 
     protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
     {
-        $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
+        // // works but too slow on large tables
+        // $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
+        // foreach ($columns as $column) {
+        //     $sql .= 
+        //         $uniquesTable . '.' . $this->pdo->ticks($column) . ' = ' . $removalsTable . '.' . $this->pdo->ticks($column) . ' AND ';
+        // }
+        // $sql = rtrim($sql, 'AND ');
+        // $sql .= ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
+        // $this->pdo->statement($sql);
 
-        // remove id, we don't want that in the where clause
-        array_shift($columns);
+        $i = 1;
 
-        foreach ($columns as $column) {
-            $sql .= 
-                $uniquesTable . '.' . $this->pdo->ticks($column) . ' = ' . $removalsTable . '.' . $this->pdo->ticks($column) . ' AND ';
-        }
-
-        $sql = rtrim($sql, 'AND ');
+        $count = $this->db->table($uniquesTable)->count();
         
+        while ($i < $count && $i !== null) {
 
-        $sql .= ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
+            $uniqueRow = $this->db->table($uniquesTable)->select($columns)->where('id', $i)->first();
 
-        $this->pdo->statement($sql);
+            if (is_null($uniqueRow)) {
+                $i = $this->getNextId($id, $uniquesTable);
+                continue;
+            } else {
+                // remove the id column and store in id, leaving only the columns
+                $id = array_shift($uniqueRow);
+
+                // dd($uniqueRow);
+
+                $this->db->table($removalsTable)->where($uniqueRow)->update(['new_id' => $id]);
+                $this->info('Updated removals table for ' . $uniquesTable . '.id = ' . $id);
+                $i = $this->getNextId($id, $uniquesTable);
+            }
+        }
     }
 
     protected function insertDiffToNewTable($uniquesTable, $dupesTable, $removalsTable, array $columns)

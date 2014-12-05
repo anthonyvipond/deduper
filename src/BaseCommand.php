@@ -101,9 +101,11 @@ abstract class BaseCommand extends Command {
 
     protected function getNextId($id, $table)
     {
-        $result = $this->db->table($table)->select($this->db->raw('min(id) as id'))->where('id', '>', $id)->first();
+        $sql = 'id from ' . $table . ' where id = (select min(id) from ' . $table . ' where id > ' . $id . ')';
 
-        return isset($result->id) ? $result->id : null;
+        $result = $this->pdo->select($sql)->fetch();
+
+        return isset($result) ? $result->id : null;
     }
 
     protected function addNewColumn($table, $column)
