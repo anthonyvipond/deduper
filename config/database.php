@@ -13,4 +13,4 @@ $smallDb = [
 
 $bigDb = array_merge($smallDb, ['database' => 'juwai_staging']);
 
-return $bigDb;
+return $smallDb;

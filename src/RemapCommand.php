@@ -54,14 +54,26 @@ class RemapCommand extends DedupeCommand {
 
 
         $this->comment('Updating removals table with new id');
-        $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable);
+        $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
         $this->feedback('Completed updating removals table');
     }
 
-    protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable)
+    protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
     {
-        $sql = 'UPDATE ' . $removalsTable . ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id 
-                WHERE ' . $uniquesTable . '.id = ' . $removalsTable . '.id';
+        $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
+
+        // remove id, we don't want that in the where clause
+        array_shift($columns);
+
+        foreach ($columns as $column) {
+            $sql .= 
+                $uniquesTable . '.' . $this->pdo->ticks($column) . ' = ' . $removalsTable . '.' . $this->pdo->ticks($column) . ' AND ';
+        }
+
+        $sql = rtrim($sql, 'AND ');
+        
+
+        $sql .= ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
 
         $this->pdo->statement($sql);
     }
@@ -72,7 +84,7 @@ class RemapCommand extends DedupeCommand {
         
         $selectSql = 'SELECT ' . $columns . ' FROM ' . $dupesTable . ' WHERE `id` NOT IN (SELECT id FROM ' . $uniquesTable . ')';
         
-        $sql = 'INSERT INTO ' . $removalsTable . ' ' . $selectSql;
+        $sql = 'INSERT INTO ' . $removalsTable . ' (' . $columns . ') ' . $selectSql;
 
         $this->pdo->statement($sql);
     }
