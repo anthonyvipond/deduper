@@ -21,7 +21,7 @@ class RemapCommand extends DedupeCommand {
              ->addOption('remapFk', null, InputOption::VALUE_REQUIRED, 'The foreign key on the remap table getting remapped')
              ->addOption('startId', null, InputOption::VALUE_OPTIONAL, 'Where to start remapping from on the junk table', 1)
              ->addOption('backups', null, InputOption::VALUE_OPTIONAL, 'Whether a backup of the tables are needed or not', true)
-             ->addOption('testMode', null, InputOption::VALUE_OPTIONAL, 'Whether a backup of the tables are needed or not', false);
+             ->addOption('testMode', null, InputOption::VALUE_OPTIONAL, 'Whether to run in test mode or not', false);
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
