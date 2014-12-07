@@ -26,21 +26,21 @@ class DedupeCommand extends BaseCommand {
 
         $needBackup = $input->getOption('backups') === 'false' ? false : true;
 
-        $this->deduplicateTable(
+        $this->initiateDedupe(
             $input->getArgument('table'), 
             explode(':', $input->getArgument('columns')),
             $needBackup
         );
     }
 
-    public function deduplicateTable($table, array $columns)
+    protected function initiateDedupe($table, array $columns)
     {
         $this->validateColumnsAndSetPurgeMode($columns);
 
-        $this->outputDuplicateData($table, $columns);
+        $duplicateRows = $this->outputDuplicateData($table, $columns);
 
-        if ($this->duplicateRows === 0) {
-            $this->notifyNoDuplicates($table, $columns);
+        if ($duplicateRows === 0) {
+            $this->info('There are no duplicate rows in ' . $table . ' using cols: ' . commaSeperate($columns));
             return;
         }
 
@@ -62,11 +62,39 @@ class DedupeCommand extends BaseCommand {
         $this->info('Recounting total rows...');
 
         $totalRows = $this->pdo->getTotalRows($table);
-        $this->feedback($table . ' now has ' . $totalRows . ' total rows');
+        $this->info($table . ' now has ' . $totalRows . ' total rows');
 
         $duplicateRows = $this->pdo->getDuplicateRows($table, $columns);
-        $this->feedback($table . ' now has ' . $duplicateRows . ' duplicate rows');
+        $this->info($table . ' now has ' . $duplicateRows . ' duplicate rows');
+    }
 
+    protected function dedupe($table, array $columns)
+    {
+        $commaColumns = commaSeperate($columns);
+        $tickColumns = tickCommaSeperate($columns);
+
+        if ($this->purgeMode == 'alter') {
+            $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $commaColumns . ')';
+            $this->pdo->statement($statement);
+        } else {
+            $this->pdo->statement('CREATE TABLE ' . $table . '_deduped LIKE ' . $table);
+            $this->pdo->statement('INSERT ' . $table . '_deduped SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
+            $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $table . '_with_dupes');
+            $this->pdo->statement('RENAME TABLE ' .  $table . '_deduped TO ' . $table);
+
+            // the target table is now the one holding duplicates
+            $this->tableWithDupes = $table . '_with_dupes';
+        }
+    }
+
+    protected function validateColumnsAndSetPurgeMode(array $columns)
+    {
+        foreach ($columns as $column) {
+            if ($this->pdo->isMySqlKeyword($column)) {
+                $this->comment('`' . $column . '` is a MySQL keyword. Bad column name, buddy.');
+                $this->purgeMode = 'groupBy';
+            }
+        }
     }
 
 }

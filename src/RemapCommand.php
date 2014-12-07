@@ -103,6 +103,29 @@ class RemapCommand extends DedupeCommand {
         $this->feedback('Completed updating removals table');
     }
 
+    protected function indexTable($table, $col = 'id')
+    {
+        $this->info('Indexing ' . $table . ' on ' . $col);
+        $this->pdo->statement('ALTER TABLE ' . $table . ' ADD PRIMARY KEY(id)');
+        $this->comment('Finished indexing.');
+    }
+
+    protected function createTableStructure($tableName, $newTableName, $columns = array())
+    {
+        $sql = 'CREATE TABLE ' . ticks($newTableName) . ' LIKE ' . ticks($tableName);
+        
+        $this->pdo->statement($sql);
+    }
+
+    protected function seedTable($sourceTable, $targetTable, $columns)
+    {
+        if (is_array($columns)) $columns = tickCommaSeperate($columns);
+
+        $sql = 'INSERT ' . ticks($targetTable) . ' SELECT ' . $columns . ' FROM ' . ticks($sourceTable);
+
+        $this->pdo->statement($sql);
+    }
+
     protected function insertDiffToNewTable($uniquesTable, $dupesTable, $removalsTable, array $columns)
     {
         $this->comment('Populating removals table');
