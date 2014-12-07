@@ -18,15 +18,11 @@ class RemapCommand extends DedupeCommand {
              ->addArgument('uniquesTable', InputArgument::REQUIRED, 'The table with unique values')
              ->addArgument('columns', InputArgument::REQUIRED, 'Colon seperated rows that define the uniqueness of a row')
              ->addOption('foreignKey', null, InputOption::VALUE_REQUIRED, 'The foreign key on the remap table getting remapped')
-             ->addOption('parentKey', null, InputOption::VALUE_OPTIONAL, 'The parent key on dupes table. Usually id', 'id')
-             ->addOption('startId', null, InputOption::VALUE_OPTIONAL, 'Where to start remapping from on the junk table', 1)
-             ->addOption('backups', null, InputOption::VALUE_OPTIONAL, 'Whether a backup of the tables are needed or not', true);
+             ->addOption('parentKey', null, InputOption::VALUE_OPTIONAL, 'The parent key on dupes table. Usually id', 'id');
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        $needBackup = $input->getOption('backups') === 'false' ? false : true;
-
         $this->init($output);
 
         $uniquesTable = $input->getArgument('uniquesTable');
@@ -35,36 +31,55 @@ class RemapCommand extends DedupeCommand {
 
         $foreignKey = $input->getOption('foreignKey');
         $parentKey = $input->getOption('parentKey');
-        $startId = $input->getOption('startId');
 
-        $posFileHandle = $this->findOrCreatePositionFile($uniquesTable, $remapTable);
+        // $posFileHandle = $this->findOrCreatePositionFile($uniquesTable, $remapTable);
 
         $removalsTable = $uniquesTable . '_removals';
 
         $dupesTable = $uniquesTable . '_with_dupes';
 
+        $this->info('Creating table ' . $removalsTable . ' like ' . $dupesTable . '...');
         $this->pdo->copyTable($dupesTable, $removalsTable);
+        $this->feedback('Created table ' . $removalsTable . ' like ' . $dupesTable);
 
+        $this->info('Populating removals table...');
         $this->insertDiffToNewTable($uniquesTable, $dupesTable, $removalsTable, $columns);
+        $this->feedback('Populated removals table');
 
+        $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $uniquesTable . '...');
         $this->pdo->addIntegerColumn($removalsTable, 'new_id');
+        $this->feedback('Added new_id field to ' . $removalsTable);
 
+        $this->info('Adding composite index to ' . $removalsTable . ' (' . commaSeperate($columns) . ') to populate it quickly...');
+        $this->pdo->createCompositeIndex($removalsTable, $columns);
+        $this->feedback('Added composite index for ' . $removalsTable . ' on ' . commaSeperate($columns));
+
+        $this->info('Adding new ids to removals table...');
         $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
+        $this->feedback('Added new ids to removals table');
 
+        $col = $columns[0];
+
+        $this->info('Adding composite index to ' . $removalsTable . ' (' . $col . ', new_id) to populate it quickly...');
+        $this->pdo->createCompositeIndex($removalsTable, [$col, 'new_id']);
+        $this->feedback('Added composite index for ' . $removalsTable . ' on ' . $col . ',new_id');
+
+        $this->info('Updating rest of removals table on ' . $uniquesTable . '.' . $col . ' = ' . $removalsTable . '.' . $col);
+        $this->insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $col);
+        $this->feedback('Updated rest of removals table on ' . $uniquesTable . '.' . $col);
+
+        // $this->comment('Remapping the ' . $remapTable . ' from ' . $removalsTable);
         // $this->remapFk($remapTable, $removalsTable);
+        // $this->feedback('Completed remapping for ' . $remapTable);
     }
 
     protected function remapFk($remapTable, $removalsTable)
     {
-        $this->comment('Remapping the ' . $remapTable . ' from ' . $removalsTable);
         // code here
-        $this->feedback('Completed remapping for ' . $remapTable);
     }
 
     protected function insertDiffToNewTable($uniquesTable, $dupesTable, $removalsTable, array $columns)
     {
-        $this->comment('Populating removals table');
-
         // insert the ids as well
         array_unshift($columns, 'id');
 
@@ -78,66 +93,68 @@ class RemapCommand extends DedupeCommand {
 
         // remove id from columns
         array_shift($columns);
-
-        $this->feedback('Populating of removals table completed');
     }
 
     protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
     {
-        $this->comment('Updating removals table with new ids');
+        $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
 
-        $i = 1;
-
-        $count = $this->db->table($uniquesTable)->count();
-
-        while ($i < $count && $i !== null) {
-
-            array_unshift($columns, 'id');
-
-            $uniqueRow = $this->db->table($uniquesTable)->select($columns)->where('id', $i)->first();
-
-            if (is_null($uniqueRow)) {
-                $i = $this->pdo->getNextId($i, $uniquesTable);
-            } else {
-                // remove the id column and store in id, leaving only the columns
-                $id = array_shift($uniqueRow);
-
-                $this->db->table($removalsTable)->where($uniqueRow)->where('new_id', null)->update(['new_id' => $id]);
-                $this->info('Updated removals table for ' . $uniquesTable . '.id = ' . $id);
-                $i = $this->pdo->getNextId($id, $uniquesTable);
-            }
+        foreach ($columns as $column) {
+            $sql .= 
+                $uniquesTable . '.' . ticks($column) . ' = ' . $removalsTable . '.' . ticks($column) . ' AND ';
         }
 
-        $this->feedback('Completed updating removals table');
+        $sql = rtrim($sql, 'AND ');
+        $sql .= ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
+        $this->pdo->statement($sql);
+
+        // slow way
+        // $i = 1;
+
+        // $count = $this->db->table($uniquesTable)->count();
+
+        // while ($i < $count && $i !== null) {
+
+        //     array_unshift($columns, 'id');
+
+        //     $uniqueRow = $this->db->table($uniquesTable)->select($columns)->where('id', $i)->first();
+
+        //     if (is_null($uniqueRow)) {
+        //         $i = $this->pdo->getNextId($i, $uniquesTable);
+        //     } else {
+        //         // remove the id column, leaving only the columns
+        //         array_shift($uniqueRow);
+
+        //         $this->db->table($removalsTable)->where($uniqueRow)->where('new_id', null)->update(['new_id' => $i]);
+        //         $this->info('Updated removals table for ' . $uniquesTable . '.id = ' . $i);
+        //         $i = $this->pdo->getNextId($i, $uniquesTable);
+        //     }
+        // }
     }
 
-    // protected function indexTable($table, $col = 'id')
-    // {
-    //     $this->info('Indexing ' . $table . ' on ' . $col);
-    //     $this->pdo->statement('ALTER TABLE ' . $table . ' ADD PRIMARY KEY(id)');
-    //     $this->comment('Finished indexing.');
-    // }
-
-    
-
-    // protected function seedTable($sourceTable, $targetTable, $columns)
-    // {
-    //     if (is_array($columns)) $columns = tickCommaSeperate($columns);
-
-    //     $sql = 'INSERT ' . ticks($targetTable) . ' SELECT ' . $columns . ' FROM ' . ticks($sourceTable);
-
-    //     $this->pdo->statement($sql);
-    // }
-
-    protected function findOrCreatePositionFile($dupesTable, $remapTable)
+    protected function insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $column)
     {
-        $this->file = __DIR__ . '/../dedupe_' . $dupesTable . '_remap_' . $remapTable . '_pos.txt';
+        // works but too slow on large tables
+        $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
 
-        if ( ! file_exists($this->file)) {
-            return fopen($this->file, 'w+');
-        }
+        $sql .= $uniquesTable . '.' . ticks($column) . ' = ' . $removalsTable . '.' . ticks($column);
 
-        if ( ! is_writable($this->file)) throw new \Exception('Cannot write file to ' . $this->file);
+        $sql .= ' AND ' . $removalsTable . '.new_id IS NULL';
+
+        $sql .= ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
+
+        $this->pdo->statement($sql);
     }
+
+    // protected function findOrCreatePositionFile($dupesTable, $remapTable)
+    // {
+    //     $this->file = __DIR__ . '/../dedupe_' . $dupesTable . '_remap_' . $remapTable . '_pos.txt';
+
+    //     if ( ! file_exists($this->file)) {
+    //         return fopen($this->file, 'w+');
+    //     }
+
+    //     if ( ! is_writable($this->file)) throw new \Exception('Cannot write file to ' . $this->file);
+    // }
 
 }
