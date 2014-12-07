@@ -10,7 +10,7 @@ abstract class BaseCommand extends Command {
 
     protected $db;
     protected $pdo;
-    protected $creds = __DIR__ . '/../config/database.php';
+    protected $creds = '../config/database.php';
     protected $purgeMode = 'alter';
 
     protected function outputDuplicateData($dupeTable, array $columns)
