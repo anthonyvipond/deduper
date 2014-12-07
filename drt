@@ -17,7 +17,7 @@ $app = new Application('Dedupe and Remap Tool (DRT)', '1.0');
 
 $app->add(new DedupeCommand);
 $app->add(new RemapCommand);
-$app->add(new TestCommand);
+// $app->add(new TestCommand);
 
 $app->run();
 

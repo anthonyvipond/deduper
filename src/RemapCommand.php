@@ -87,7 +87,8 @@ class RemapCommand extends DedupeCommand {
             $removalRow = $this->db->table($removalsTable)->find($i);
             $new_id = $removalRow['new_id'];
 
-            $affectedRows = $this->db->table($remapTable)->where($foreignKey, $i)
+            $affectedRows = $this->db->table($remapTable)
+                                         ->where($foreignKey, $i)
                                          ->update([$foreignKey => $new_id]);
 
             $this->feedback('Updated foreign key on ' . $remapTable . ' for ' . $removalsTable . '.id = ' . $i);

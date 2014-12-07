@@ -33,7 +33,7 @@ And install dependencies:
 
 You should now type the command from the directory
 ```
-./drt
+php drt
 ```
 
 **Removes duplicates from your table based on an array of columns defining a row's uniqueness**
@@ -54,7 +54,7 @@ id | name
 7  | Joseph
 
 ```
-./drt dedupe tableName name
+php drt dedupe tableName name
 ```
 
 You will get your original table backed up, and your table will become this:
@@ -99,11 +99,6 @@ Already have your table backed up? You can pass a **no backups** flag. It create
 ./drt dedupe tableName name --backups=false
 ```
 
-If you don't want to see SQL queries being run, pass an --hidesql flag. It's shows SQL by default.
-```
-./drt dedupe tableName name --backups=false --hidesql
-```
-
 ----------------------------
 
 ###Deduplicating and Remapping####
@@ -131,13 +126,13 @@ The `champions` table links to various different Knicks records, but the Knicks 
 The solution is deduplicating and remapping. Look closely:
 
 ```
-./drt remap remapTable duplicatesTable team --duplicatesColumn=id --remapFkColumn=team_id
+php drt remap remapTable duplicatesTable team --parentKey=id --foreignKey=team_id
 ```
 
 Like the basic dedupe command, you can also specify multiple columns to define row uniqueness.
 
 ```
-./drt remap remapTable duplicatesTable firstname:lastname:birthday --duplicatesColumn=id --remapFkColumn=employee_id
+php drt remap remapTable duplicatesTable firstname:lastname:birthday --parentKey=id --foreignKey=employee_id
 ```
 
 By default both tables will be backed up for you. Disable this by passing a `--nobackups` flag
