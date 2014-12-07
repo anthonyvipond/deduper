@@ -62,10 +62,10 @@ class DedupeCommand extends BaseCommand {
         $this->info('Recounting total rows...');
 
         $totalRows = $this->pdo->getTotalRows($table);
-        $this->info($table . ' now has ' . $totalRows . ' total rows');
+        $this->feedback($table . ' now has ' . number_format($totalRows) . ' total rows');
 
         $duplicateRows = $this->pdo->getDuplicateRows($table, $columns);
-        $this->info($table . ' now has ' . $duplicateRows . ' duplicate rows');
+        $this->feedback($table . ' now has ' . $duplicateRows . ' duplicate rows');
     }
 
     protected function dedupe($table, array $columns)
