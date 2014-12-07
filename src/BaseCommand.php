@@ -10,7 +10,7 @@ abstract class BaseCommand extends Command {
 
     protected $db;
     protected $pdo;
-    protected $creds = '../config/database.php';
+    protected $creds;
     protected $purgeMode = 'alter';
 
     protected function outputDuplicateData($dupeTable, array $columns)
@@ -75,8 +75,9 @@ abstract class BaseCommand extends Command {
 
     protected function initDb(Capsule $capsule)
     {
-        $capsule->addConnection(require $this->creds);
+        global $dbCreds;
 
+        $capsule->addConnection($dbCreds);
         $capsule->setEventDispatcher(new Dispatcher);
         $capsule->setAsGlobal();
         $capsule->bootEloquent();
@@ -86,8 +87,10 @@ abstract class BaseCommand extends Command {
 
     protected function init($output)
     {
+        global $dbCreds;
+
         $this->output = $output;
-        $this->pdo = new SimplePdo(require $this->creds);
+        $this->pdo = new SimplePdo($dbCreds);
         $this->db = $this->initDb(new Capsule);
     }
 
