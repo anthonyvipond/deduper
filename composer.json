@@ -13,11 +13,17 @@
         "illuminate/database": "~4.2",
         "symfony/console": "~2.0",
         "symfony/process": "2.5.*",
-	"anthonyvipond/simple-pdo": "dev-master"
+        "anthonyvipond/simple-pdo": "dev-master"
     },
     "autoload": {
         "psr-4": {
             "DRT\\" : "src"
         }
-    }
+    },
+    "repositories": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/anthonyvipond/simple-pdo.git"
+        }
+    ]
 }

@@ -7,6 +7,9 @@ use DRT\DedupeCommand;
 use DRT\RemapCommand;
 use DRT\TestCommand;
 
+ ini_set('memory_limit','-1');
+ set_time_limit(0);
+
 require_once 'vendor/autoload.php';
 
 $app = new Application('Dedupe and Remap Tool (DRT)', '1.0');

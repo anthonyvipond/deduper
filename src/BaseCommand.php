@@ -16,27 +16,22 @@ abstract class BaseCommand extends Command {
     protected function outputDuplicateData($dupeTable, array $columns)
     {
         $this->info('Counting total rows...');
-        $this->totalRows = $this->db->table($dupeTable)->count();
-        $this->feedback('`' . $dupeTable . '` has ' .  number_format($this->totalRows) . ' total rows');
+        $totalRows = $this->pdo->getTotalRows($dupeTable);
+        $this->feedback('`' . $dupeTable . '` has ' .  number_format($totalRows) . ' total rows');
 
-        $this->info('Counting unique rows');
-        $uniqueRows = $this->countUniqueRows($dupeTable, $columns);
+        $this->info('Counting unique rows...');
+        $uniqueRows = $this->pdo->getUniqueRows($dupeTable, $columns);
         $this->feedback('`' . $dupeTable . '` has ' .  number_format($uniqueRows) . ' unique rows');
 
-        $this->duplicateRows = $this->totalRows - $uniqueRows;
-    }
-
-    protected function countUniqueRows($dupeTable, $columns)
-    {
-        $sql = 'DISTINCT ' . $this->pdo->toTickCommaSeperated($columns);
-        
-        return $this->pdo->select('count(' . $sql . ') as uniques FROM ' . $dupeTable)->fetch()->uniques;
+        $this->info('Counting duplicate rows...');
+        $this->duplicateRows = $this->pdo->getDuplicateRows($dupeTable, $columns);
+        $this->feedback('`' . $dupeTable . '` has ' .  number_format($this->duplicateRows) . ' duplicate rows');
     }
 
     protected function notifyNoDuplicates($dupeTable, $columns)
     {
         print 'There are no duplicate rows in ' . $dupeTable . ' using these columns: ';
-        $this->comment($this->pdo->toCommaSeperated($columns));
+        $this->comment(commaSeperate($columns));
     }
 
     protected function backup($table, $columns = '*')
@@ -66,13 +61,6 @@ abstract class BaseCommand extends Command {
 
     protected function createTableStructure($tableName, $newTableName, $columns = array())
     {
-        // if ( ! empty($columns)) {
-        //     $columns = $this->pdo->toTickCommaSeperated($columns);
-        // }
-
-        // $sql = 'CREATE TABLE ' . $this->pdo->ticks($newTableName) . 
-        //        ' SELECT ' . $columns  . ' FROM ' . $this->pdo->ticks($tableName) . ' LIMIT 0';
-
         $sql = 'CREATE TABLE ' . $this->pdo->ticks($newTableName) . ' LIKE ' . $this->pdo->ticks($tableName);
         
         $this->pdo->statement($sql);
@@ -87,38 +75,10 @@ abstract class BaseCommand extends Command {
         $this->pdo->statement($sql);
     }
 
-    protected function idExists($id, $table)
-    {
-        $result = $this->db->selectOne('SELECT exists(SELECT 1 FROM ' . $table . ' where id=' . $id . ') as `exists`');
-
-        return (bool) $result->exists;
-    }
-
-    protected function tableExists($table)
-    {
-        return is_int($this->pdo->tableExists('count(*) as rows FROM ' . $this->pdo->ticks($table)));
-    }
-
-    protected function getNextId($id, $table)
-    {
-        $sql = 'id from ' . $table . ' where id = (select min(id) from ' . $table . ' where id > ' . $id . ')';
-
-        $result = $this->pdo->select($sql)->fetch();
-
-        return isset($result) ? $result->id : null;
-    }
-
-    protected function addNewColumn($table, $column)
-    {
-        $sql = 'ALTER TABLE ' . $table . ' ADD ' . $column . ' int(11)';
-
-        $this->pdo->statement($sql);
-    }
-
     protected function dedupe($table, array $columns)
     {
-        $commaColumns = $this->pdo->toCommaSeperated($columns);
-        $tickColumns = $this->pdo->toTickCommaSeperated($columns);
+        $commaColumns = commaSeperate($columns);
+        $tickColumns = tickCommaSeperate($columns);
 
         if ($this->purgeMode == 'alter') {
             $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $commaColumns . ')';
@@ -176,16 +136,5 @@ abstract class BaseCommand extends Command {
         $this->pdo = new SimplePdo(require $this->creds);
         $this->db = $this->initDb(new Capsule);
     }
-
-    // protected function logQueries($needLogging)
-    // {
-    //     if ($needLogging) {
-    //         Event::listen('illuminate.query', function($sql, $bindings, $time) {
-    //             $sql = str_replace(array('%', '?'), array('%%', '%s'), $sql);
-    //             $sql = vsprintf($sql, $bindings);
-    //             $this->comment($sql);
-    //         });
-    //     }
-    // }
 
 }
