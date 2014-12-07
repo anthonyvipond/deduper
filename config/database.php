@@ -11,7 +11,7 @@ $smallDb = [
     'prefix'    => '',
 ];
 
-$bigDb = array_merge($smallDb, ['database' => 'juwai_homestead']);
+$bigDb = array_merge($smallDb, ['database' => 'juwai_big']);
 
 $prodDb = array_merge($smallDb, [
     'host' => 'juwai-4.ct5zmhdgch5k.ap-southeast-1.rds.amazonaws.com',

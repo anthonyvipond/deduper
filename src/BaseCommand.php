@@ -63,6 +63,16 @@ abstract class BaseCommand extends Command {
         $this->output->writeln('<comment>' . $string . '</comment>');
     }
 
+    protected function error($string)
+    {
+        $this->output->writeln('<error>' . $string . '</error>');
+    }
+
+    protected function notify($string)
+    {
+        $this->output->writeln('<question>' . $string . '</question>');
+    }
+
     protected function initDb(Capsule $capsule)
     {
         $capsule->addConnection(require $this->creds);

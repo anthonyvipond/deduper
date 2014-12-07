@@ -38,6 +38,10 @@ class RemapCommand extends DedupeCommand {
 
         $dupesTable = $uniquesTable . '_with_dupes';
 
+        if ($this->pdo->tableExists($removalsTable)) {
+            return $this->error($removalsTable . ' already exists. Have you already remapped?');
+        }
+
         $this->info('Creating table ' . $removalsTable . ' like ' . $dupesTable . '...');
         $this->pdo->copyTable($dupesTable, $removalsTable);
         $this->feedback('Created table ' . $removalsTable . ' like ' . $dupesTable);
