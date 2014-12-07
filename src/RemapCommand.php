@@ -68,12 +68,12 @@ class RemapCommand extends DedupeCommand {
         $this->insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $col);
         $this->feedback('Updated rest of removals table on ' . $uniquesTable . '.' . $col);
 
-        // $this->comment('Remapping the ' . $remapTable . ' from ' . $removalsTable);
-        // $this->remapFk($remapTable, $removalsTable);
-        // $this->feedback('Completed remapping for ' . $remapTable);
+        $this->comment('Remapping the ' . $remapTable . ' from ' . $removalsTable);
+        $this->remapForeignKeys($remapTable, $removalsTable);
+        $this->feedback('Completed remapping for ' . $remapTable);
     }
 
-    protected function remapFk($remapTable, $removalsTable)
+    protected function remapForeignKeys($remapTable, $removalsTable)
     {
         // code here
     }
@@ -107,29 +107,6 @@ class RemapCommand extends DedupeCommand {
         $sql = rtrim($sql, 'AND ');
         $sql .= ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
         $this->pdo->statement($sql);
-
-        // slow way
-        // $i = 1;
-
-        // $count = $this->db->table($uniquesTable)->count();
-
-        // while ($i < $count && $i !== null) {
-
-        //     array_unshift($columns, 'id');
-
-        //     $uniqueRow = $this->db->table($uniquesTable)->select($columns)->where('id', $i)->first();
-
-        //     if (is_null($uniqueRow)) {
-        //         $i = $this->pdo->getNextId($i, $uniquesTable);
-        //     } else {
-        //         // remove the id column, leaving only the columns
-        //         array_shift($uniqueRow);
-
-        //         $this->db->table($removalsTable)->where($uniqueRow)->where('new_id', null)->update(['new_id' => $i]);
-        //         $this->info('Updated removals table for ' . $uniquesTable . '.id = ' . $i);
-        //         $i = $this->pdo->getNextId($i, $uniquesTable);
-        //     }
-        // }
     }
 
     protected function insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $column)
