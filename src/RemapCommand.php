@@ -83,11 +83,7 @@ class RemapCommand extends BaseCommand {
 
     protected function remapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
     {   
-        if ( is_null($this->db->table($removalsTable)->find($startId))) {
-            $startId = 1;
-        }
-
-        $i = $startId;
+        $i = is_null($this->db->table($removalsTable)->find($startId)) ? 1 : $startId;
 
         while (is_int($i)) {
             $removalRow = $this->db->table($removalsTable)->find($i);
@@ -98,15 +94,12 @@ class RemapCommand extends BaseCommand {
                                      ->update([$foreignKey => $new_id]);
 
             $this->feedback('Updated foreign key on ' . $remapTable . ' for ' . $removalsTable . '.id = ' . $i);
-            $this->comment($affectedRows . ' affected rows');
+            
+            $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
             
             $i = $this->pdo->getNextId($i, $removalsTable);
 
             $logline = 'Maplog: ' . $removalsTable . ' to ' . $remapTable . ' up to ' . $removalsTable . '.' . $i;
-
-            // if ($i % 10 === 0) {
-            //     file_put_contents('../' . $removalsTable . '_remapping_' . $remapTable . '_pos.txt', $logline);
-            // }
         }
     }
 
@@ -143,7 +136,6 @@ class RemapCommand extends BaseCommand {
 
     protected function insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $column)
     {
-        // works but too slow on large tables
         $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
 
         $sql .= $uniquesTable . '.' . ticks($column) . ' = ' . $removalsTable . '.' . ticks($column);
