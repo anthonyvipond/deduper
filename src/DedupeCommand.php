@@ -77,6 +77,10 @@ class DedupeCommand extends BaseCommand {
             $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $commaColumns . ')';
             $this->pdo->statement($statement);
         } else {
+            $this->comment('Creating composite index on ' . $table . ' to speed things up...');
+            $this->pdo->createCompositeIndex($table, $columns);
+            $this->comment('Created composite index on ' . $table);
+
             $this->pdo->statement('CREATE TABLE ' . $table . '_deduped LIKE ' . $table);
             $this->pdo->statement('INSERT ' . $table . '_deduped SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
             $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $table . '_with_dupes');
