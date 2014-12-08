@@ -31,10 +31,27 @@ class SeedDbCommand extends Command {
         $min = $this->db->table($sourceTable)->min('id');
         $max = $this->db->table($sourceTable)->max('id');
 
+        $count = 0;
+
+        $batch = [];
+
+        // insert in batches of 500 rows
+        $batch[] = $min
+
         for ($i = $min; $i <= $max; $i++)
         {
-            
+            $i = $this->pdo->getNextId($i, $sourceTable);
+
+            $batch[] = $i;
+
+            $count++;
+
+            if ($count % 1000 === 0) {
+                $this->insertBatch($targetTable, $sourceTable, $batch);
+            }
         }
     }
+
+    protected function insertBatch($targetTable, $)
 
 }

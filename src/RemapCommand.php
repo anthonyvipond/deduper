@@ -8,7 +8,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\ArrayInput;
 
-class RemapCommand extends DedupeCommand {
+class RemapCommand extends BaseCommand {
 
     public function configure()
     {
@@ -20,6 +20,7 @@ class RemapCommand extends DedupeCommand {
              ->addOption('foreignKey', null, InputOption::VALUE_REQUIRED, 'The foreign key on the remap table getting remapped')
              ->addOption('parentKey', null, InputOption::VALUE_OPTIONAL, 'The parent key on dupes table. Usually id', 'id')
              ->addOption('stage', null, InputOption::VALUE_OPTIONAL, 'Optionally pass in "remap" stage to jump to remapping');
+             ->addOption('startId', null, InputOption::VALUE_OPTIONAL, 'What id to start mapping from on the removals table');
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
@@ -33,6 +34,7 @@ class RemapCommand extends DedupeCommand {
         $foreignKey   = $input->getOption('foreignKey');
         $parentKey    = $input->getOption('parentKey');
         $stage        = $input->getOption('stage');
+        $startId      = $input->getOption('startId');
 
         $removalsTable = $uniquesTable . '_removals';
 
@@ -68,20 +70,24 @@ class RemapCommand extends DedupeCommand {
             $this->info('Updating rest of removals table on ' . $uniquesTable . '.' . $col . ' = ' . $removalsTable . '.' . $col);
             $this->insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $col);
             $this->feedback('Updated rest of removals table on ' . $uniquesTable . '.' . $col);
-        }
 
-        $this->comment('Creating index on ' . $remapTable . ' for ' . $foreignKey . ' to populate quickly...');
-        $this->pdo->createIndex($remapTable, $foreignKey);
-        $this->feedback('Added index for ' . $remapTable . ' on ' . $foreignKey);
+            $this->comment('Creating index on ' . $remapTable . ' for ' . $foreignKey . ' to populate quickly...');
+            $this->pdo->createIndex($remapTable, $foreignKey);
+            $this->feedback('Added index for ' . $remapTable . ' on ' . $foreignKey);
+        }
 
         $this->comment('Remapping the ' . $remapTable . ' from ' . $removalsTable . ' for ' . $remapTable);
         $this->remapForeignKeys($remapTable, $removalsTable, $foreignKey);
         $this->feedback('Completed remapping for ' . $remapTable);
     }
 
-    protected function remapForeignKeys($remapTable, $removalsTable, $foreignKey)
+    protected function remapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
     {        
-        $i = $this->db->table($removalsTable)->find(1) ? 1 : $this->pdo->getNextId(1, $removalsTable);
+        if ($startId) {
+            $i = $startId;
+        } else {
+            $i = $this->db->table($removalsTable)->find(1) ? 1 : $this->pdo->getNextId(1, $removalsTable);
+        }
 
         while (is_int($i)) {
             $removalRow = $this->db->table($removalsTable)->find($i);
