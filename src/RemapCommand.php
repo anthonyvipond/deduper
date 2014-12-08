@@ -77,7 +77,7 @@ class RemapCommand extends BaseCommand {
         }
 
         $this->comment('Remapping the ' . $remapTable . ' from ' . $removalsTable . ' for ' . $remapTable);
-        $this->remapForeignKeys($remapTable, $removalsTable, $foreignKey);
+        $this->remapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId);
         $this->feedback('Completed remapping for ' . $remapTable);
     }
 
