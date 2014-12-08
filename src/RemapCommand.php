@@ -82,8 +82,12 @@ class RemapCommand extends BaseCommand {
     }
 
     protected function remapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
-    {        
-        $i = $this->db->table($removalsTable)->find($startId) ?: 1;
+    {   
+        if ( is_null($this->db->table($removalsTable)->find($startId))) {
+            $startId = 1;
+        }
+
+        $i = $startId;
 
         while (is_int($i)) {
             $removalRow = $this->db->table($removalsTable)->find($i);
