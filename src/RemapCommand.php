@@ -20,7 +20,7 @@ class RemapCommand extends BaseCommand {
              ->addOption('foreignKey', null, InputOption::VALUE_REQUIRED, 'The foreign key on the remap table getting remapped')
              ->addOption('parentKey', null, InputOption::VALUE_OPTIONAL, 'The parent key on dupes table. Usually id', 'id')
              ->addOption('stage', null, InputOption::VALUE_OPTIONAL, 'Optionally pass in "remap" stage to jump to remapping')
-             ->addOption('startId', null, InputOption::VALUE_OPTIONAL, 'What id to start mapping from on the removals table');
+             ->addOption('startId', null, InputOption::VALUE_OPTIONAL, 'What id to start mapping from on the removals table', 1);
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
@@ -34,7 +34,7 @@ class RemapCommand extends BaseCommand {
         $foreignKey   = $input->getOption('foreignKey');
         $parentKey    = $input->getOption('parentKey');
         $stage        = $input->getOption('stage');
-        $startId      = $input->getOption('startId');
+        $startId      = (int) $input->getOption('startId');
 
         $removalsTable = $uniquesTable . '_removals';
 
@@ -83,11 +83,7 @@ class RemapCommand extends BaseCommand {
 
     protected function remapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
     {        
-        if ($startId) {
-            $i = $startId;
-        } else {
-            $i = $this->db->table($removalsTable)->find(1) ? 1 : $this->pdo->getNextId(1, $removalsTable);
-        }
+        $i = $this->db->table($removalsTable)->find($startId) ?: 1;
 
         while (is_int($i)) {
             $removalRow = $this->db->table($removalsTable)->find($i);
