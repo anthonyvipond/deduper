@@ -31,12 +31,10 @@ And install dependencies:
     composer install
 ```
 
-You should now type the command from the directory
+You should now be able to use the program from the command line (where drt file is stored)
 ```
 php drt
 ```
-
-**Removes duplicates from your table based on an array of columns defining a row's uniqueness**
 
 Purpose
 ------------
@@ -54,7 +52,7 @@ id | name
 7  | Joseph
 
 ```
-php drt dedupe tableName name
+php drt dedupe tableName columnName
 ```
 
 You will get your original table backed up, and your table will become this:
@@ -96,14 +94,20 @@ id | firstname | lastname
 Already have your table backed up? You can pass a **no backups** flag. It creates backups by default.
 
 ```
-./drt dedupe tableName name --backups=false
+./drt dedupe tableName firstname:lastname --backups=false
 ```
 
 ----------------------------
 
-###Deduplicating and Remapping####
+###Remapping####
 
-Suppose you have this `teams` table:
+After you run the `dedupe` command you will have a backup of your table called `yourTableName_with_dupes` It is your original table.
+
+If you passed a no backups flag because you have a backup already, rename your backup to `yourTableName_with_dupes`
+
+This backup table needs to be present for remapping to work. It won't be written to but needs to be read from.
+
+Suppose you have this `teams_with_dupes` table:
 
 id | team
 ------------- | -------------
@@ -111,6 +115,13 @@ id | team
 3  | Knicks
 4  | Lakers
 5  | Knicks
+
+And the `teams` table (remember, you deduped already)
+
+id | team
+------------- | -------------
+2  | Knicks
+4  | Lakers
 
 And you also have this `champions` table showing the Knicks won all the championships:
 
@@ -126,25 +137,19 @@ The `champions` table links to various different Knicks records, but the Knicks 
 The solution is deduplicating and remapping. Look closely:
 
 ```
-php drt remap remapTable duplicatesTable team --parentKey=id --foreignKey=team_id
+php drt remap remapTable uniquesTable team --parentKey=id --foreignKey=team_id
 ```
 
 Like the basic dedupe command, you can also specify multiple columns to define row uniqueness.
 
 ```
-php drt remap remapTable duplicatesTable firstname:lastname:birthday --parentKey=id --foreignKey=employee_id
+php drt remap remapTable uniquesTable firstname:lastname:birthday --parentKey=id --foreignKey=employee_id
 ```
 
-By default both tables will be backed up for you. Disable this by passing a `--nobackups` flag
+By default the remapTable table will be backed up for you. Disable this by passing a `--nobackups` flag
 
-And here is your result of running the first dedupe command:
+And here is your result of running the first remap command:
 
-`teams` table:
-
-id | team
-------------- | -------------
-2  | Knicks
-4  | Lakers
 
 `champions` table:
 
