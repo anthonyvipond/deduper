@@ -105,7 +105,7 @@ After you run the `dedupe` command you will have a backup of your table called `
 
 If you passed a no backups flag because you have a backup already, rename your backup to `yourTableName_with_dupes`
 
-This backup table needs to be present for remapping to work. It won't be written to but needs to be read from.
+This backup table **needs to be present** for remapping to work. It won't be written to but **needs to be read from**.
 
 Suppose you have this `teams_with_dupes` table:
 
@@ -137,13 +137,13 @@ The `champions` table links to various different Knicks records, but the Knicks 
 The solution is deduplicating and remapping. Look closely:
 
 ```
-php drt remap remapTable uniquesTable team --parentKey=id --foreignKey=team_id
+php drt remap remapTable uniquesTable columnName --parentKey=id --foreignKey=team_id
 ```
 
 Like the basic dedupe command, you can also specify multiple columns to define row uniqueness.
 
 ```
-php drt remap remapTable uniquesTable firstname:lastname:birthday --parentKey=id --foreignKey=employee_id
+php drt remap remapTable uniquesTable column1:column2:column3 --parentKey=id --foreignKey=employee_id
 ```
 
 By default the remapTable table will be backed up for you. Disable this by passing a `--nobackups` flag
@@ -169,5 +169,5 @@ Contribution Guidelines
 Notes
 ------------
 
-- As of right now, to use `./drt remap` both duplicates and remap table must have an `id` column
+- As of right now, to use the `remap` command, both duplicates and remap table must have an `id` column
 - Only tested on MySQL
