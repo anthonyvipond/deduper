@@ -87,10 +87,10 @@ class RemapCommand extends BaseCommand {
 
     protected function getRemapMethod($removalsTable, $remapTable)
     {
-        $remapTableSize = $this->db->table($remapTable)->count();
         $removalsTableSize = $this->db->table($removalsTable)->count();
+        $remapTableSize = $this->db->table($remapTable)->count();
 
-        return ($removalsTableSize / $removalsTableSize > 5) ? 'remapForeignKeys' : 'reverseRemapForeignKeys';
+        return ($removalsTableSize / $remapTable > 5) ? 'reverseRemapForeignKeys' : 'remapForeignKeys';
     }
 
     protected function reverseRemapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
@@ -108,7 +108,7 @@ class RemapCommand extends BaseCommand {
                 if ( ! is_null($newId)) {
                     $affectedRows = $this->db->table($remapTable)->where('id', $i)->update([$foreignKey => $newId]);
 
-                    $this->feedback('Updated foreign key on ' . $remapTable . ' for ' . $remapTable . '.id = ' . $i);
+                    $this->feedback('Updated ' . $remapTable . '.' . $foreignKey . ' from ' . $i . ' to ' . $newId);
 
                     $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
                 } else {
@@ -153,8 +153,6 @@ class RemapCommand extends BaseCommand {
             $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
             
             $i = $this->pdo->getNextId($i, $removalsTable);
-
-            $logline = 'Maplog: ' . $removalsTable . ' to ' . $remapTable . ' up to ' . $removalsTable . '.' . $i;
         }
     }
 
