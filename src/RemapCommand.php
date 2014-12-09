@@ -90,7 +90,7 @@ class RemapCommand extends BaseCommand {
         $removalsTableSize = $this->db->table($removalsTable)->count();
         $remapTableSize = $this->db->table($remapTable)->count();
 
-        return ($removalsTableSize / $remapTable > 5) ? 'reverseRemapForeignKeys' : 'remapForeignKeys';
+        return (($removalsTableSize / $remapTable) > 5) ? 'reverseRemapForeignKeys' : 'remapForeignKeys';
     }
 
     protected function reverseRemapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
