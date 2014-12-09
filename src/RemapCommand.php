@@ -112,7 +112,7 @@ class RemapCommand extends BaseCommand {
 
                     $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
                 } else {
-                    $this->feedback($removalsTablec . '.' . $foreignKey . ' was null. continuing...');
+                    $this->feedback($removalsTable . '.' . $foreignKey . ' was null. continuing...');
                 }
             } else {
                 $this->feedback($remapTable . '.' . $foreignKey . ' was null. continuing...');
