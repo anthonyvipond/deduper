@@ -74,7 +74,6 @@ class RemapCommand extends BaseCommand {
 
         $this->comment('Creating index on ' . $remapTable . ' for ' . $foreignKey . ' to populate quickly...');
         $this->pdo->createIndex($remapTable, $foreignKey);
-        $this->feedback('Added index for ' . $remapTable . ' on ' . $foreignKey);
 
         $this->comment('Getting lookup method...');
         $remapMethod = $this->getRemapMethod($removalsTable, $remapTable);
