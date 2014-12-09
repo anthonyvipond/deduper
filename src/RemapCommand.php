@@ -134,13 +134,8 @@ class RemapCommand extends BaseCommand {
                                      ->where($foreignKey, $i)
                                      ->update([$foreignKey => $new_id]);
 
-            $this->feedback('Updated foreign key on ' . $remapTable . ' for ' . $removalsTable . '.id = ' . $i);
-            
-            if ($affectedRows > 0) {
-                $this->info('Updated ' . $affectedRows . ' rows on ' . $foreignKey . ' from id ' . $i . ' to ' . $new_id);
-            } else {
-                $this->comment($affectedRows . ' affected rows');
-            }
+            $this->feedback('Updated ' . $remapTable . '.' . $foreignKey . ' from ' . $i . ' to ' . $newId);
+
             $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
             
             $i = $this->pdo->getNextId($i, $removalsTable);
