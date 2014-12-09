@@ -16,7 +16,7 @@ class RemapCommand extends BaseCommand {
              ->setDescription('De-duplicate a table and remap another one')
              ->addArgument('remapTable', InputArgument::REQUIRED, 'The table to be remapped')
              ->addArgument('uniquesTable', InputArgument::REQUIRED, 'The table with unique values')
-             ->addArgument('columns', InputArgument::REQUIRED, 'Colon seperated rows that define the uniqueness of a row')
+             ->addArgument('columns', InputArgument::OPTIONAL, 'Colon seperated rows that define the uniqueness of a row')
              ->addOption('foreignKey', null, InputOption::VALUE_REQUIRED, 'The foreign key on the remap table getting remapped')
              ->addOption('parentKey', null, InputOption::VALUE_OPTIONAL, 'The parent key on dupes table. Usually id', 'id')
              ->addOption('stage', null, InputOption::VALUE_OPTIONAL, 'Optionally pass in "remap" stage to jump to remapping')
@@ -70,23 +70,78 @@ class RemapCommand extends BaseCommand {
             $this->info('Updating rest of removals table on ' . $uniquesTable . '.' . $col . ' = ' . $removalsTable . '.' . $col);
             $this->insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $col);
             $this->feedback('Updated rest of removals table on ' . $uniquesTable . '.' . $col);
-
-            $this->comment('Creating index on ' . $remapTable . ' for ' . $foreignKey . ' to populate quickly...');
-            $this->pdo->createIndex($remapTable, $foreignKey);
-            $this->feedback('Added index for ' . $remapTable . ' on ' . $foreignKey);
         }
 
-        $this->comment('Remapping the ' . $remapTable . ' from ' . $removalsTable . ' for ' . $remapTable);
-        $this->remapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId);
+        // $this->comment('Creating index on ' . $remapTable . ' for ' . $foreignKey . ' to populate quickly...');
+        // $this->pdo->createIndex($remapTable, $foreignKey);
+        // $this->feedback('Added index for ' . $remapTable . ' on ' . $foreignKey);
+
+        $this->comment('Getting lookup method...');
+        $remapMethod = $this->getRemapMethod($removalsTable, $remapTable);
+        $this->feedback('Will use ' . $remapMethod . ' lookup method');
+
+        $this->comment('Remapping the ' . $remapTable . 'table from ' . $removalsTable . ' on ' . $foreignKey);
+        $this->$remapMethod($remapTable, $removalsTable, $foreignKey, $startId);
         $this->feedback('Completed remapping for ' . $remapTable);
     }
+
+    protected function getRemapMethod($removalsTable, $remapTable)
+    {
+        $remapTableSize = $this->db->table($remapTable)->count();
+        $removalsTableSize = $this->db->table($removalsTable)->count();
+
+        return ($removalsTableSize / $removalsTableSize > 5) ? 'remapForeignKeys' : 'reverseRemapForeignKeys';
+    }
+
+    protected function reverseRemapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
+    {
+        $i = is_null($this->db->table($remapTable)->find($startId)) ? $this->db->table($remapTable)->min('id') : $startId;
+
+        while (is_int($i)) {
+            $remapRow = keysToLower($this->db->table($remapTable)->find($i));
+
+            $remapRowFk = $remapRow[$foreignKey];
+
+            if ( ! is_null($remapRowFk)) {
+                $newId = $this->db->table($removalsTable)->find($remapRowFk)['new_id'];
+
+                if ( ! is_null($newId)) {
+                    $affectedRows = $this->db->table($remapTable)->where('id', $i)->update([$foreignKey => $newId]);
+
+                    $this->feedback('Updated foreign key on ' . $remapTable . ' for ' . $remapTable . '.id = ' . $i);
+
+                    $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
+                } else {
+                    $this->feedback($removalsTablec . '.' . $foreignKey . ' was null. continuing...');
+                }
+            } else {
+                $this->feedback($remapTable . '.' . $foreignKey . ' was null. continuing...');
+            }
+
+            $i = $this->pdo->getNextId($i, $remapTable);
+        }
+    }
+            // if ( ! is_null($remapRow[$foreignKey])) {
+            //     dd($remapRow[$foreignKey]);
+            //     $new_id = $this->db->table($removalsTable)->find($remapRow[$foreignKey])['new_id'];
+
+            //     $affectedRows = $this->db->table($remapTable)->where('id', $i)->update([$foreignKey => $new_id]);
+
+            //     $this->feedback('Updated foreign key on ' . $remapTable . ' for ' . $remapTable . '.id = ' . $i);
+
+            //     $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
+            // } else {
+            //     $this->notify($remapTable . '.' . $foreignKey . ' was null. continuing...');
+            // }
+
 
     protected function remapForeignKeys($remapTable, $removalsTable, $foreignKey, $startId)
     {   
         $i = is_null($this->db->table($removalsTable)->find($startId)) ? 1 : $startId;
 
         while (is_int($i)) {
-            $removalRow = $this->db->table($removalsTable)->find($i);
+            $removalRow = keysToLower($this->db->table($removalsTable)->find($i));
+
             $new_id = $removalRow['new_id'];
 
             $affectedRows = $this->db->table($remapTable)

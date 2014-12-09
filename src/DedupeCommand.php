@@ -79,7 +79,7 @@ class DedupeCommand extends BaseCommand {
         } else {
             $this->comment('Creating composite index on ' . $table . ' to speed things up...');
             $this->pdo->createCompositeIndex($table, $columns);
-            $this->comment('Created composite index on ' . $table);
+            $this->feedback('Created composite index on ' . $table);
 
             $this->pdo->statement('CREATE TABLE ' . $table . '_deduped LIKE ' . $table);
             $this->pdo->statement('INSERT ' . $table . '_deduped SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
