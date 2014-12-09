@@ -128,11 +128,11 @@ class RemapCommand extends BaseCommand {
         while (is_int($i)) {
             $removalRow = keysToLower($this->db->table($removalsTable)->find($i));
 
-            $new_id = $removalRow['new_id'];
+            $newId = $removalRow['new_id'];
 
             $affectedRows = $this->db->table($remapTable)
                                      ->where($foreignKey, $i)
-                                     ->update([$foreignKey => $new_id]);
+                                     ->update([$foreignKey => $newId]);
 
             $this->feedback('Updated ' . $remapTable . '.' . $foreignKey . ' from ' . $i . ' to ' . $newId);
 
