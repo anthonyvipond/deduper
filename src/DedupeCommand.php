@@ -38,17 +38,15 @@ class DedupeCommand extends BaseCommand {
             return;
         }
 
-        $this->info('Removing duplicates from original. Please hold...');
-
         $this->dedupe($table, $columns);
         
         $this->info('Dedupe completed. Recounting total rows in ' . $table);
-
         $totalRows = $this->pdo->getTotalRows($table);
         $this->feedback($table . ' now has ' . number_format($totalRows) . ' total rows');
 
+        $this->info('Counting duplicate rows for ' . $table . ' on: ' . commaSeperate($columns));
         $duplicateRows = $this->pdo->getDuplicateRows($table, $columns);
-        $this->feedback($table . ' now has ' . $duplicateRows . ' duplicate rows');
+        $this->feedback($table . ' now has ' . $duplicateRows . ' duplicate rows on: ' . commaSeperate($columns));
     }
 
     protected function dedupe($table, array $columns)
@@ -58,7 +56,7 @@ class DedupeCommand extends BaseCommand {
         $indexName    = implode('_', $columns);
 
         if ( ! $this->pdo->indexExists($table, $indexName)) {
-            $this->comment('Creating composite index on ' . $table . ' to speed things up...');
+            $this->info('Creating composite index on ' . $table . ' to speed things up...');
             $this->pdo->createCompositeIndex($table, $columns);
             $this->feedback('Created composite index on ' . $table);
         }
@@ -67,23 +65,23 @@ class DedupeCommand extends BaseCommand {
         $dedupedTable  = $table . '_deduped_' . $time;
         $removalsTable = $table . '_removals';
 
-        $this->comment('Deduping ' . $table . '. Backup table is ' . $originalTable . ' Please hold...');
-
+        $this->info('Deduping ' . $table . '. Backup table is ' . $originalTable . '. Please hold...');
         $this->pdo->statement('CREATE TABLE ' . $dedupedTable . ' LIKE ' . $table);
         $this->pdo->statement('INSERT ' . $dedupedTable . ' SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
         $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $originalTable);
         $this->pdo->statement('RENAME TABLE ' .  $dedupedTable . ' TO ' . $table);
+        $this->feedback('Deduped ' . $table);
 
         if ( ! $this->pdo->tableExists($removalsTable)) {
             $this->info('Creating removals table: ' . $removalsTable);
             $this->pdo->statement('CREATE TABLE ' . $removalsTable . ' LIKE ' . $table);
-
-            $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $table . '...');
-            $this->pdo->addIntegerColumn($removalsTable, 'new_id');
-            $this->feedback('Added new_id field to ' . $removalsTable);
         }
 
         $this->insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable);
+
+        $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $table . '...');
+        $this->pdo->addIntegerColumn($removalsTable, 'new_id');
+        $this->feedback('Added new_id field to ' . $removalsTable);
     }
 
     protected function insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable)
