@@ -11,7 +11,7 @@ abstract class BaseCommand extends Command {
     protected $db;
     protected $pdo;
     protected $creds;
-    protected $purgeMode = 'alter';
+    protected $purgeMode = 'groupBy';
 
     protected function outputDuplicateData($dupeTable, array $columns)
     {

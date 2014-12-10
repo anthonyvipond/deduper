@@ -35,8 +35,6 @@ class DedupeCommand extends BaseCommand {
 
     protected function initiateDedupe($table, array $columns)
     {
-        $this->validateColumnsAndSetPurgeMode($columns);
-
         $duplicateRows = $this->outputDuplicateData($table, $columns);
 
         if ($duplicateRows === 0) {
@@ -44,7 +42,6 @@ class DedupeCommand extends BaseCommand {
             return;
         }
 
-        // if purge mode isn't alter, a backup will be created anyways
         if ($this->purgeMode == 'alter') $this->backup($table);
 
         $this->info('Removing duplicates from original. Please hold...');
@@ -73,32 +70,32 @@ class DedupeCommand extends BaseCommand {
         $commaColumns = commaSeperate($columns);
         $tickColumns = tickCommaSeperate($columns);
 
-        if ($this->purgeMode == 'alter') {
-            $statement = 'ALTER IGNORE TABLE ' . $table . ' ADD UNIQUE INDEX idx_dedupe (' . $commaColumns . ')';
-            $this->pdo->statement($statement);
-        } else {
-            $this->comment('Creating composite index on ' . $table . ' to speed things up...');
-            $this->pdo->createCompositeIndex($table, $columns);
-            $this->feedback('Created composite index on ' . $table);
+        $this->indexOriginalTable($table, $columns);
 
-            $this->pdo->statement('CREATE TABLE ' . $table . '_deduped LIKE ' . $table);
-            $this->pdo->statement('INSERT ' . $table . '_deduped SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
-            $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $table . '_with_dupes');
-            $this->pdo->statement('RENAME TABLE ' .  $table . '_deduped TO ' . $table);
+        $originalTable = $table . '_original';
 
-            // the target table is now the one holding duplicates
-            $this->tableWithDupes = $table . '_with_dupes';
-        }
+        $this->pdo->statement('CREATE TABLE ' . $table . '_deduped LIKE ' . $table);
+        $this->pdo->statement('INSERT ' . $table . '_deduped SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
+        $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $originalTable);
+        $this->pdo->statement('RENAME TABLE ' .  $table . '_deduped TO ' . $table);
+
+        $this->insertRemovedRowsToRemovalsTable($table, $originalTable);
+
+        $this->tableWithDupes = $table . '_with_dupes';
     }
 
-    protected function validateColumnsAndSetPurgeMode(array $columns)
+    protected function insertRemovedRowsToRemovalsTable($table, $originalTable)
     {
-        foreach ($columns as $column) {
-            if ($this->pdo->isMySqlKeyword($column)) {
-                $this->comment('`' . $column . '` is a MySQL keyword. Bad column name, buddy.');
-                $this->purgeMode = 'groupBy';
-            }
-        }
+        $this->pdo->statement('CREATE TABLE ' . $table . '_removals LIKE ' . $table);
+        $subQuery = '(SELECT id FROM ' . $table . ')';
+        $this->pdo->statement('INSERT ' . $table . '_removals SELECT * FROM ' . $originalTable . ' WHERE id NOT IN ' . $subQuery);
+    }
+
+    protected function indexOriginalTable($table, $columns)
+    {
+        $this->comment('Creating composite index on ' . $table . ' to speed things up...');
+        $this->pdo->createCompositeIndex($table, $columns);
+        $this->feedback('Created composite index on ' . $table);
     }
 
 }
