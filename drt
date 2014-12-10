@@ -5,7 +5,7 @@
 use Symfony\Component\Console\Application;
 use DRT\DedupeCommand;
 use DRT\RemapCommand;
-use DRT\TestCommand;
+use DRT\LinkCommand;
 
  ini_set('memory_limit','-1');
  set_time_limit(0);
@@ -16,8 +16,8 @@ require_once 'config/database.php';
 $app = new Application('Dedupe and Remap Tool (DRT)', '1.0');
 
 $app->add(new DedupeCommand);
+$app->add(new LinkCommand);
 $app->add(new RemapCommand);
-// $app->add(new SeedDbCommand);
 
 $app->run();
 
