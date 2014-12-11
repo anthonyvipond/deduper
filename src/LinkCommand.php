@@ -47,8 +47,10 @@ class LinkCommand extends BaseCommand {
         array_unshift($columns, 'id');
 
         $columnString = tickCommaSeperate($columns);
+
+        $subQuery = '(SELECT id FROM ' . $table . ')';
         
-        $selectSql = 'SELECT ' . $columnString . ' FROM ' . $dupesTable . ' WHERE `id` NOT IN (SELECT id FROM ' . $table . ')';
+        $selectSql = 'SELECT ' . $columnString . ' FROM ' . $dupesTable . ' WHERE `id` NOT IN ' . $subQuery;
         
         $sql = 'INSERT INTO ' . $removalsTable . ' (' . $columnString . ') ' . $selectSql;
 

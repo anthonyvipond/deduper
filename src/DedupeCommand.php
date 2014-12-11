@@ -79,17 +79,25 @@ class DedupeCommand extends BaseCommand {
 
         $this->insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable);
 
-        $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $table . '...');
-        $this->pdo->addIntegerColumn($removalsTable, 'new_id');
-        $this->feedback('Added new_id field to ' . $removalsTable);
+        if ( ! $this->pdo->columnExists('new_id', $removalsTable)) {
+            $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $table . '...');
+            $this->pdo->addIntegerColumn($removalsTable, 'new_id');
+            $this->feedback('Added new_id field to ' . $removalsTable);
+        }
     }
 
     protected function insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable)
     {
+        $originalColumns = tickCommaSeperate($this->pdo->getColumns($table));
+
         $subQuery = '(SELECT id FROM ' . $table . ')';
-        $sql = 'INSERT ' . $removalsTable . ' SELECT * FROM ' . $originalTable . ' WHERE id NOT IN ' . $subQuery;
+        $selectClause = 'SELECT ' . $originalColumns . ' FROM ' . $originalTable . ' WHERE id NOT IN ' . $subQuery;
+        // $sql = 'INSERT ' . $removalsTable . ' ' . $selectClause;
+
+        $sql = 'INSERT INTO ' . $removalsTable . '(' . $originalColumns . ') ' . $selectClause;
+
         $affectedRows = $this->pdo->statement($sql);
-        $this->feedback('Inserted ' . $affectedRows . ' rows to ' . $table);
+        $this->feedback('Inserted ' . number_format($affectedRows) . ' rows to ' . $removalsTable);
     }
 
 }
