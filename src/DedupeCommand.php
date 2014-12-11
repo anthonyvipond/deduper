@@ -65,7 +65,7 @@ class DedupeCommand extends BaseCommand {
         $dedupedTable  = $table . '_deduped_' . $time;
         $removalsTable = $table . '_removals';
 
-        $this->info('Deduping ' . $table . '. Backup table is ' . $originalTable . '. Please hold...');
+        $this->info('Deduping ' . $table . '. Backup table is named: ' . $originalTable . '. Please hold...');
         $this->pdo->statement('CREATE TABLE ' . $dedupedTable . ' LIKE ' . $table);
         $this->pdo->statement('INSERT ' . $dedupedTable . ' SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
         $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $originalTable);
@@ -77,7 +77,9 @@ class DedupeCommand extends BaseCommand {
             $this->pdo->statement('CREATE TABLE ' . $removalsTable . ' LIKE ' . $table);
         }
 
-        $this->insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable);
+        $this->comment('Inserting removed rows to removal table');
+        $affectedRows = $this->insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable);
+        $this->feedback('Inserted ' . number_format($affectedRows) . ' rows to ' . $removalsTable);
 
         if ( ! $this->pdo->columnExists('new_id', $removalsTable)) {
             $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $table . '...');
@@ -92,12 +94,10 @@ class DedupeCommand extends BaseCommand {
 
         $subQuery = '(SELECT id FROM ' . $table . ')';
         $selectClause = 'SELECT ' . $originalColumns . ' FROM ' . $originalTable . ' WHERE id NOT IN ' . $subQuery;
-        // $sql = 'INSERT ' . $removalsTable . ' ' . $selectClause;
 
         $sql = 'INSERT INTO ' . $removalsTable . '(' . $originalColumns . ') ' . $selectClause;
 
-        $affectedRows = $this->pdo->statement($sql);
-        $this->feedback('Inserted ' . number_format($affectedRows) . ' rows to ' . $removalsTable);
+        return $this->pdo->statement($sql);
     }
 
 }

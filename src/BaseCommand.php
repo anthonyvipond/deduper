@@ -89,8 +89,6 @@ abstract class BaseCommand extends Command {
     {
         global $dbCreds;
 
-        // $this->database = $dbCreds['database'];
-        
         $this->output = $output;
         $this->pdo = new SimplePdo($dbCreds);
         $this->db = $this->initDb(new Capsule);

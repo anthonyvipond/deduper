@@ -23,69 +23,35 @@ class LinkCommand extends BaseCommand {
     {
         $this->init($output);
 
-        $table         = $input->getArgument('uniquesTable');
+        $uniquesTable  = $input->getArgument('uniquesTable');
         $dupesTable    = $input->getArgument('dupesTable');
-        $removalsTable = $table . '_removals';
+        $removalsTable = $uniquesTable . '_removals';
         $columns       = explode(':', $input->getArgument('columns'));
 
-        $this->info('Populating removals table...');
-        $this->insertDiffToNewTable($table, $dupesTable, $removalsTable, $columns);
-        $this->feedback('Populated removals table');
-
-        $this->info('Adding composite index to ' . $removalsTable . ' (' . commaSeperate($columns) . ') to populate quickly...');
-        $this->pdo->createCompositeIndex($removalsTable, $columns + ['new_id']);
-        $this->feedback('Added composite index for ' . $removalsTable . ' on ' . commaSeperate($columns));
+        if ( ! $this->pdo->indexExists($removalsTable, implode('_', $columns))) {
+            $this->info('Adding composite index to ' . $removalsTable . ' (' . commaSeperate($columns) . ') to populate quickly...');
+            $this->pdo->createCompositeIndex($removalsTable, $columns + ['new_id']);
+            $this->feedback('Added composite index for ' . $removalsTable . ' on ' . commaSeperate($columns));
+        }
 
         $this->info('Adding new ids to removals table...');
-        $this->insertNewIdsToRemovalsTable($table, $removalsTable, $columns);
+        $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
         $this->feedback('Added new ids to removals table');
     }
 
-    protected function insertDiffToNewTable($table, $dupesTable, $removalsTable, array $columns)
+    protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
     {
-        // insert the ids as well
-        array_unshift($columns, 'id');
-
-        $columnString = tickCommaSeperate($columns);
-
-        $subQuery = '(SELECT id FROM ' . $table . ')';
-        
-        $selectSql = 'SELECT ' . $columnString . ' FROM ' . $dupesTable . ' WHERE `id` NOT IN ' . $subQuery;
-        
-        $sql = 'INSERT INTO ' . $removalsTable . ' (' . $columnString . ') ' . $selectSql;
-
-        $this->pdo->statement($sql);
-
-        // remove id from columns
-        array_shift($columns);
-    }
-
-    protected function insertNewIdsToRemovalsTable($table, $removalsTable, array $columns)
-    {
-        $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $table . ' ON ';
+        $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
 
         foreach ($columns as $column) {
-            $sql .= $table . '.' . ticks($column) . ' = ' . $removalsTable . '.' . ticks($column) . ' AND ';
+            $sql .= $uniquesTable . '.' . ticks($column) . ' = ' . $removalsTable . '.' . ticks($column) . ' AND ';
         }
 
-        $sql . 'new_id IS NULL ';
+        $sql .= 'new_id IS NULL ';
 
-        // $sql = rtrim($sql, 'AND ');
-        $sql .= 'SET ' . $removalsTable . '.new_id = ' . $table . '.id';
+        $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
+
         $this->pdo->statement($sql);
     }
-
-    // protected function insertNewIdsWhereUnableToMatchOnAllColumns($uniquesTable, $removalsTable, $column)
-    // {
-    //     $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON ';
-
-    //     $sql .= $uniquesTable . '.' . ticks($column) . ' = ' . $removalsTable . '.' . ticks($column);
-
-    //     $sql .= ' AND ' . $removalsTable . '.new_id IS NULL';
-
-    //     $sql .= ' SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
-
-    //     $this->pdo->statement($sql);
-    // }
 
 }
