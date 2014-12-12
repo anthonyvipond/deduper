@@ -16,6 +16,7 @@ class LinkCommand extends BaseCommand {
              ->setDescription('Add the new_id value to removals table based on the columns')
              ->addArgument('uniquesTable', InputArgument::REQUIRED, 'The table with unique values')
              ->addArgument('dupesTable', InputArgument::REQUIRED, 'The original table with duplicate values')
+             ->addArgument('removalsTable', InputArgument::REQUIRED, 'The removals table name')
              ->addArgument('columns', InputArgument::OPTIONAL, 'Colon seperated rows that we are linking new_id on');
     }
 
@@ -25,12 +26,12 @@ class LinkCommand extends BaseCommand {
 
         $uniquesTable  = $input->getArgument('uniquesTable');
         $dupesTable    = $input->getArgument('dupesTable');
-        $removalsTable = $uniquesTable . '_removals';
+        $removalsTable = $input->getArgument('removalsTable');
         $columns       = explode(':', $input->getArgument('columns'));
         $indexName     = implode('_', $columns);
 
         if ( ! $this->pdo->indexExists($removalsTable, $indexName)) {
-            $this->info('Adding composite index to ' . $removalsTable . ' (' . commaSeperate($columns) . ') to populate quickly...');
+            $this->info('Adding composite index to ' . $removalsTable . ' (' . commaSeperate($columns) . ') to populate quickly');
             $this->pdo->createCompositeIndex($removalsTable, $columns + ['new_id']);
             $this->feedback('Added composite index for ' . $removalsTable . ' on ' . commaSeperate($columns));
         }

@@ -59,16 +59,16 @@ class DedupeCommand extends BaseCommand {
             $this->feedback('Created composite index on ' . $table);
         }
 
-        $originalTable = $table . '_original_' . $time = time();
+        // $originalTable = $table . '_original_' . $time = time();
         $dedupedTable  = $table . '_deduped_' . $time;
         $removalsTable = $table . '_removals';
 
-        $this->info('Deduping ' . $table . '. Backup table is named: ' . $originalTable . '. Please hold...');
+        $this->info('Deduping ' . $table . ' please hold...');
         $this->pdo->statement('CREATE TABLE ' . $dedupedTable . ' LIKE ' . $table);
         $this->pdo->statement('INSERT ' . $dedupedTable . ' SELECT * FROM ' . $table . ' GROUP BY ' . tickCommaSeperate($columns));
-        $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $originalTable);
-        $this->pdo->statement('RENAME TABLE ' .  $dedupedTable . ' TO ' . $table);
-        $this->feedback('Deduped ' . $table);
+        // $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $originalTable);
+        // $this->pdo->statement('RENAME TABLE ' .  $dedupedTable . ' TO ' . $table);
+        $this->feedback('Deduped ' . $table '. Deduped table name is' . $dedupedTable);
 
         if ( ! $this->pdo->tableExists($removalsTable)) {
             $this->info('Creating removals table: ' . $removalsTable);
@@ -77,7 +77,7 @@ class DedupeCommand extends BaseCommand {
         }
 
         $this->info('Inserting removed rows to removal table');
-        $affectedRows = $this->insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable);
+        $affectedRows = $this->insertRemovedRowsToRemovalsTable($table, $dedupedTable, $removalsTable);
         $this->feedback('Inserted ' . number_format($affectedRows) . ' rows to ' . $removalsTable);
 
         if ( ! $this->pdo->columnExists('new_id', $removalsTable)) {
@@ -87,14 +87,14 @@ class DedupeCommand extends BaseCommand {
         }
     }
 
-    protected function insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable)
+    protected function insertRemovedRowsToRemovalsTable($table, $dedupedTable, $removalsTable)
     {
-        $originalColumns = tickCommaSeperate($this->pdo->getColumns($table));
+        $columns = tickCommaSeperate($this->pdo->getColumns($table));
 
-        $subQuery = '(SELECT id FROM ' . $table . ')';
-        $selectClause = 'SELECT ' . $originalColumns . ' FROM ' . $originalTable . ' WHERE id NOT IN ' . $subQuery;
+        $subQuery = '(SELECT id FROM ' . $dedupedTable . ')';
+        $selectClause = 'SELECT ' . $columns . ' FROM ' . $table . ' WHERE id NOT IN ' . $subQuery;
 
-        $sql = 'INSERT INTO ' . $removalsTable . '(' . $originalColumns . ') ' . $selectClause;
+        $sql = 'INSERT INTO ' . $removalsTable . '(' . $columns . ') ' . $selectClause;
 
         return $this->pdo->statement($sql);
     }
