@@ -27,16 +27,17 @@ class LinkCommand extends BaseCommand {
         $dupesTable    = $input->getArgument('dupesTable');
         $removalsTable = $uniquesTable . '_removals';
         $columns       = explode(':', $input->getArgument('columns'));
+        $indexName     = implode('_', $columns);
 
-        if ( ! $this->pdo->indexExists($removalsTable, implode('_', $columns))) {
+        if ( ! $this->pdo->indexExists($removalsTable, $indexName)) {
             $this->info('Adding composite index to ' . $removalsTable . ' (' . commaSeperate($columns) . ') to populate quickly...');
             $this->pdo->createCompositeIndex($removalsTable, $columns + ['new_id']);
             $this->feedback('Added composite index for ' . $removalsTable . ' on ' . commaSeperate($columns));
         }
 
         $this->info('Adding new ids to removals table...');
-        $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
-        $this->feedback('Added new ids to removals table');
+        $affectedRows = $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
+        $this->feedback('Linked ' . $affectedRows . ' records on new_id in ' . $removalsTable);
     }
 
     protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
@@ -51,7 +52,7 @@ class LinkCommand extends BaseCommand {
 
         $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
 
-        $this->pdo->statement($sql);
+        return $this->pdo->statement($sql);
     }
 
 }

@@ -51,9 +51,7 @@ class DedupeCommand extends BaseCommand {
 
     protected function dedupe($table, array $columns)
     {
-        $commaColumns = commaSeperate($columns);
-        $tickColumns  = tickCommaSeperate($columns);
-        $indexName    = implode('_', $columns);
+        $indexName = implode('_', $columns);
 
         if ( ! $this->pdo->indexExists($table, $indexName)) {
             $this->info('Creating composite index on ' . $table . ' to speed things up...');
@@ -67,7 +65,7 @@ class DedupeCommand extends BaseCommand {
 
         $this->info('Deduping ' . $table . '. Backup table is named: ' . $originalTable . '. Please hold...');
         $this->pdo->statement('CREATE TABLE ' . $dedupedTable . ' LIKE ' . $table);
-        $this->pdo->statement('INSERT ' . $dedupedTable . ' SELECT * FROM ' . $table . ' GROUP BY ' . $tickColumns);
+        $this->pdo->statement('INSERT ' . $dedupedTable . ' SELECT * FROM ' . $table . ' GROUP BY ' . tickCommaSeperate($columns));
         $this->pdo->statement('RENAME TABLE ' . $table . ' TO ' . $originalTable);
         $this->pdo->statement('RENAME TABLE ' .  $dedupedTable . ' TO ' . $table);
         $this->feedback('Deduped ' . $table);
@@ -75,9 +73,10 @@ class DedupeCommand extends BaseCommand {
         if ( ! $this->pdo->tableExists($removalsTable)) {
             $this->info('Creating removals table: ' . $removalsTable);
             $this->pdo->statement('CREATE TABLE ' . $removalsTable . ' LIKE ' . $table);
+            $this->feedback('Created removals table');
         }
 
-        $this->comment('Inserting removed rows to removal table');
+        $this->info('Inserting removed rows to removal table');
         $affectedRows = $this->insertRemovedRowsToRemovalsTable($table, $originalTable, $removalsTable);
         $this->feedback('Inserted ' . number_format($affectedRows) . ' rows to ' . $removalsTable);
 
