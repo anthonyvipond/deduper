@@ -70,7 +70,7 @@ class DedupeCommand extends BaseCommand {
 
             $this->info('Inserting current unique rows on ' . $uniquesTable . ' to ' . $tempTable . '...');
             $affectedRows = $this->insertCurrentUniqueRowsToTempTable($uniquesTable, $tempTable, $columns);
-            $this->feedback('Inserted ' . $affectedRows . ' unique rows from ' . $uniquesTable . ' to ' . $tempTable);
+            $this->feedback('Inserted ' . pretty($affectedRows) . ' unique rows from ' . $uniquesTable . ' to ' . $tempTable);
         }
 
         array_unshift($columns, 'id');
@@ -88,19 +88,21 @@ class DedupeCommand extends BaseCommand {
         $this->feedback('Inserted ' . pretty($affectedRows) . ' duplicates to ' . $removalsTable);
 
         array_unshift($columns, 'new_id');
-        $this->info('Adding comp index to ' . $removalsTable . ' on ' . commaSeperate($columns) . ' to speed process...');
-        $this->pdo->createCompositeIndex($removalsTable, $columns);
-        $this->feedback('Added composite index for ' . $removalsTable);
+        if ( ! $this->pdo->indexExists($removalsTable, implode('_', $columns))) {
+            $this->info('Adding comp index to ' . $removalsTable . ' on ' . commaSeperate($columns) . ' to speed process...');
+            $this->pdo->createCompositeIndex($removalsTable, $columns);
+            $this->feedback('Added composite index for ' . $removalsTable);
+        }
         array_shift($columns);
 
         if ( ! $firstRun) {
-            $this->info('Delete duplicate rows in ' . $uniquesTable . '...');
+            $this->info('Deleting duplicate rows in ' . $uniquesTable . '...');
             $affectedRows = $this->deleteDuplicatesFromUniquesTable($uniquesTable, $removalsTable);
             $this->feedback('Deleted ' . pretty($affectedRows) . ' rows ' . $removalsTable);
         }
 
-        $this->info('Adding new ids to removals table. This may take a while but will succeed :)');
-        $affectedRows = $this->insertNewIdsToRemovalsTable($originalTable, $removalsTable, $columns);
+        $this->info('Adding new ids to removals table...');
+        $affectedRows = $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
         $this->feedback('Linked ' . pretty($affectedRows) . ' records on new_id in ' . $removalsTable);
     }
 
@@ -113,34 +115,36 @@ class DedupeCommand extends BaseCommand {
         return $this->pdo->statement($sql);
     }
 
-    // protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
-    // {
-    //     $sql  = 'UPDATE ' . $removalsTable . ' LEFT JOIN ' . $uniquesTable . ' ON ';
-
-    //     foreach ($columns as $column) {
-    //         $sql .= $removalsTable . '.' . ticks($column) . ' = ' . $uniquesTable . '.' . ticks($column) . ' AND ';
-    //     }
-
-    //     $sql  = rtrim($sql, ' AND ') . ' ';
-
-    //     $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id WHERE new_id IS NULL';
-
-    //     return $this->pdo->statement($sql);
-    // }
-
     protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
     {
-        $sql  = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON new_id IS NULL AND ';
+        $totalAffectedRows = 0;
 
-        foreach ($columns as $column) {
-            $sql .= $removalsTable . '.' . ticks($column) . ' = ' . $uniquesTable . '.' . ticks($column) . ' AND ';
+        $percentFinished = 0.00;
+
+        $totalRows = $this->pdo->getTotalRows($uniquesTable);
+
+        $rowsLooped = 0;
+
+        $i = $this->pdo->getNextId(0, $uniquesTable);
+
+        while ($i) {
+            $row = $this->db->table($uniquesTable)->select($columns)->where('id', $i)->first();
+
+            $affectedRows = $this->db->table($removalsTable)->where($row)->whereNull('new_id')->update(['new_id' => $i]);
+
+            $totalAffectedRows += $affectedRows;
+
+            if (++$rowsLooped / $totalRows > $percentFinished) {
+                $this->feedback('Updated ' . $percentFinished * 100 . '% (' . pretty($totalAffectedRows) . ' rows updated)');
+                $percentFinished += 0.02;
+            } elseif ($rowsLooped / $totalRows == 1) {
+                $this->feedback('Updated 100% (' . pretty($totalAffectedRows) . ' rows updated)');
+            }
+
+            $i = $this->pdo->getNextId($i, $uniquesTable);
         }
 
-        $sql  = rtrim($sql, ' AND ') . ' ';
-
-        $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
-
-        return $this->pdo->statement($sql);
+        return $totalAffectedRows;
     }
 
     protected function insertUniquesFromOriginalTableToUniquesTable($originalTable, $uniquesTable, array $columns)
