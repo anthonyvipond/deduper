@@ -28,13 +28,12 @@ class RemapCommand extends BaseCommand {
         $foreignKey    = $input->getArgument('foreignKey');
         $startId       = (int) $input->getOption('startId');
 
-        $this->comment('Getting lookup method...');
+        $this->info('Getting lookup method...');
         $remapMethod = $this->getRemapMethod($removalsTable, $remapTable);
         $this->feedback('Will use ' . $remapMethod . ' lookup method');
 
-        $this->info('Remapping the ' . $remapTable . ' table from ' . $removalsTable . ' on ' . $foreignKey);
+        $remapMethod .= 'Remap';
         $this->$remapMethod($remapTable, $removalsTable, $foreignKey, $startId);
-        $this->feedback('Completed remapping for ' . $remapTable);
     }
 
     protected function getRemapMethod($removalsTable, $remapTable)
@@ -42,7 +41,7 @@ class RemapCommand extends BaseCommand {
         $removalsTableSize = $this->db->table($removalsTable)->count();
         $remapTableSize = $this->db->table($remapTable)->count();
 
-        return $removalsTableSize / $remapTableSize > 5 ? 'reverseRemap' : 'standardRemap';
+        return $removalsTableSize / $remapTableSize > 5 ? 'reverse' : 'standard';
     }
 
     protected function reverseRemap($remapTable, $removalsTable, $foreignKey, $startId)
@@ -77,20 +76,24 @@ class RemapCommand extends BaseCommand {
     protected function standardRemap($remapTable, $removalsTable, $foreignKey, $startId)
     {   
         if ( ! $this->pdo->indexExists($remapTable, $foreignKey . '_drt')) {
-            $this->comment('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed remap process...');
+            $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed remap process...');
             $this->pdo->createIndex($remapTable, $foreignKey, $foreignKey . '_drt');
-            $this->info('Created index ' . $foreignKey . '_drt on ' . $remapTable);
+            $this->feedback('Created index ' . $foreignKey . '_drt on ' . $remapTable);
         }
 
         if ( ! $this->pdo->indexExists($removalsTable, 'new_id_drt')) {
-            $this->comment('Creating index new_id_drt on ' . $removalsTable . ' to speed lookup process...');
+            $this->info('Creating index new_id_drt on ' . $removalsTable . ' to speed lookup process...');
             $this->pdo->createIndex($removalsTable, 'new_id', 'new_id_drt');
-            $this->info('Created index new_id_drt on ' . $removalsTable);
+            $this->feedback('Created index new_id_drt on ' . $removalsTable);
         }
 
-        $i = is_null($this->db->table($removalsTable)->find($startId)) ? 1 : $startId;
+        if (is_null($this->db->table($removalsTable)->find($startId))) {
+            $i = $this->pdo->getNextId(1, $removalsTable);
+        } else {
+            $i = $startId;
+        }
 
-        while (is_int($i)) {
+        while ($i) {
             $removalRow = keysToLower($this->db->table($removalsTable)->find($i));
 
             $newId = $removalRow['new_id'];
@@ -99,11 +102,11 @@ class RemapCommand extends BaseCommand {
                                      ->where($foreignKey, $i)
                                      ->update([$foreignKey => $newId]);
 
-            $this->feedback('Updated ' . $remapTable . '.' . $foreignKey . ' from ' . $i . ' to ' . $newId);
+            $this->info('Updated ' . $remapTable . '.' . $foreignKey . ' from ' . $i . ' to ' . $newId);
 
-            $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
+            $affectedRows ? $this->feedback($affectedRows . ' affected rows') : $this->comment('0 affected rows');
             
-            $i = $this->pdo->getNextId($i, $removalsTable, 'AND new_id IS NOT NULL');
+            $i = $this->pdo->getNextId($i, $removalsTable);
         }
     }
 
