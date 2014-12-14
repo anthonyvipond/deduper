@@ -1,14 +1,16 @@
-Database Dedupe and Remap Tool
+MySQL Database Dedupe and Remap Tool
 ======================
 
 Purpose
 ------------
 
-A custom command removes duplicate records from your database table.
+- Removes duplicate records from your database and remaps foreign keys in other tables
 
-You can easily define the uniqueness of a row using one or more columns.
+- You can easily define the uniqueness of a row using one or more columns
 
-It works well on large tables (10M+ rows) as well.
+- It works well on large tables (10M+ rows) as well.
+
+- Designed to run directly on production tables
 
 Installation
 ------------
@@ -33,7 +35,7 @@ And install dependencies:
 
 You should now be able to use the program from the command line (where drt file is stored)
 ```
-php drt
+php drd
 ```
 
 Purpose
@@ -41,7 +43,7 @@ Purpose
 
 ###Deduplicating Tables####
 
-Suppose you have the following table:
+Suppose you have the following `people` table:
 
 id | name
 ------------- | -------------
@@ -55,59 +57,104 @@ id | name
 php drt dedupe tableName columnName
 ```
 
-You will get your original table backed up, and your table will become this:
+i.e.
+
+```
+php drt dedupe people name
+```
+
+Your original table will not be touched, and you will get this table `people_uniques`
 
 id | name
 ------------- | -------------
 2  | Mary
 3  | Joseph
 
+
 ----------------------------
 
+You will also get this table `people_removals`
 
-But what if you have a table where the uniqueness of defined over two columns:
+id | name | new_id
+------------- | -------------
+5  | Mary | 2
+6  | Joseph | 3
+7  | Joseph | 3
 
-id | firstname | lastname
+
+----------------------------
+
+But what if you have a table where the uniqueness of defined over three columns? No problem.
+
+id | firstname | lastname | birthday
 ------------- | ------------- | -------------
-2  | Mary  |  Smith
-3  | Joseph  |  Parker
-5  | Mary  |  Kate
-6  | mary  |  kate
-7  | Joseph  |  Parker
+2  | Mary  |  Smith | 1991-01-01
+3  | Joseph  |  Parker | 1984-02-02
+5  | Mary  |  Kate | 1981-08-08
+6  | mary  |  kate | 2001-03-03
+7  | Joseph  |  Parker | 1984-02-02
 
-Then seperate the columns with a `:` in the second argument:
+
+Seperate the columns with a `:` in the second argument:
 
 ```
-./drt dedupe tableName firstname:lastname
+php drd dedupe tableName firstname:lastname:birthday
 ```
 
-You will get this:
+You will get a new table `people_uniques`
 
-id | firstname | lastname
+id | firstname | lastname | 
 ------------- | ------------- | -------------
-2  | Mary  |  Smith
-3  | Joseph  |  Parker
-5  | Mary  |  Kate
+2  | Mary  |  Smith | 1991-01-01
+3  | Joseph  |  Parker | 1984-02-02
+5  | Mary  |  Kate | 1981-08-08
+6  | mary  |  kate | 2001-03-03
+
+And another table `people_removals`
+
+id | firstname | lastname | new_id
+------------- | ------------- | -------------
+7  | Joseph  |  Parker | 1984-02-02 | 3
+
 
 ----------------------------
 
-Already have your table backed up? You can pass a **no backups** flag. It creates backups by default.
+You can continue to deduplicate on different columns.
+
+Your uniques table will get smaller, and your removals table will get bigger.
+
+Take another look at the last stage our tables were in.
+
+Let's keep deduplicating further on new rules...
 
 ```
-./drt dedupe tableName firstname:lastname --backups=false
+php drd dedupe tableName firstname:lastname
 ```
 
-----------------------------
+Now `people_uniques` is like this:
+
+id | firstname | lastname | 
+------------- | ------------- | -------------
+2  | Mary  |  Smith | 1991-01-01
+3  | Joseph  |  Parker | 1984-02-02
+5  | Mary  |  Kate | 1981-08-08
+
+And `people_removals` is like this:
+
+id | firstname | lastname | new_id
+------------- | ------------- | -------------
+7  | Joseph  |  Parker | 1984-02-02 | 3
+6  | mary  |  kate | 2001-03-03 | 5
+
+
 
 ###Remapping####
 
-After you run the `dedupe` command you will have a backup of your table called `yourTableName_with_dupes` It is your original table.
+After you ran the `dedupe` command you will have **table_uniques** and **table_removals**, as well as your original
 
-If you passed a no backups flag because you have a backup already, rename your backup to `yourTableName_with_dupes`
+The removals table **needs to be present** for remapping to work. It won't be written to but **needs to be read from**.
 
-This backup table **needs to be present** for remapping to work. It won't be written to but **needs to be read from**.
-
-Suppose you have this `teams_with_dupes` table:
+Suppose you have this `teams` table:
 
 id | team
 ------------- | -------------
@@ -116,58 +163,60 @@ id | team
 4  | Lakers
 5  | Knicks
 
-And the `teams` table (remember, you deduped already)
+And the `teams_uniques` table (remember, you deduped already)
 
-id | team
+id | team | 
 ------------- | -------------
 2  | Knicks
 4  | Lakers
 
-And you also have this `champions` table showing the Knicks won all the championships:
+And you also have this `teams_removals` table which is used for remapping:
 
-id | year | team_id | 
+id | year | new_id | 
 ------------- | ------------- | -------------
-1  | 2004 | 2
-2  | 2005 | 3
-3  | 2006 | 3
-4  | 2007 | 5
-
-The `champions` table links to various different Knicks records, but the Knicks are just one team.
-
-The solution is deduplicating and remapping. Look closely:
-
-```
-php drt remap remapTable uniquesTable columnName --parentKey=id --foreignKey=team_id
-```
-
-Like the basic dedupe command, you can also specify multiple columns to define row uniqueness.
-
-```
-php drt remap remapTable uniquesTable column1:column2:column3 --parentKey=id --foreignKey=employee_id
-```
-
-By default the remapTable table will be backed up for you. Disable this by passing a `--nobackups` flag
-
-And here is your result of running the first remap command:
-
-
-`champions` table:
-
-id | year | team_id | 
-------------- | ------------- | -------------
-1  | 2004 | 2
-2  | 2005 | 2
 3  | 2006 | 2
-4  | 2007 | 2
+5  | 2007 | 4
+
+You can now remap the foreign keys on other tables pointing to teams.id
+
+```
+php drd remap remapTable removalsTable foreignKey
+```
+
+i.e.
+```
+php drd remap champions teams_removals team_id
+```
+
+You should backup your remap table prior to running the remap command.
+
+If your remapping doesn't finish the first time, just run it again. It won't hurt anything.
+
+
+###Swapping in the new table###
+
+Going back to the `people` table example...
+
+Finish remapping foreign keys for all tables that point to people.id
+
+Now for the final coup-de-grace!
+
+```sql
+RENAME TABLE table TO table_bak;
+RENAME TABLE table_uniques TO table;
+```
+
+Congrats! You've deduped and remapped your table.
+
 
 Contribution Guidelines
 ------------
 
-- I'm happy to code with you!
-- Fork and make a pull request
+- Post an issue!
+- Fork and pull.
 
 Notes
 ------------
 
-- As of right now, to use the `remap` command, both duplicates and remap table must have an `id` column
-- Only tested on MySQL
+- For the time being, your original table with duplicates must have an `id` column
+- Only works on MySQL, but I'm open to adding more support
