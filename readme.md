@@ -74,7 +74,6 @@ id | name
 3  | Joseph
 
 
-----------------------------
 
 You will also get this table `people_removals`
 
@@ -153,9 +152,11 @@ id | firstname | lastname | birthday | new_id
 
 ###Remapping####
 
-After you ran the `dedupe` command you will have **table_uniques** and **table_removals**, as well as your original
+After you ran the `dedupe` command you will have **table_uniques** and **table_removals**, as well as your original table.
 
-The removals table **needs to be present** for remapping to work. It won't be written to but **needs to be read from**.
+The removals table **needs to be present** for remapping to work. 
+
+It won't be written to but **needs to be read from**.
 
 Suppose you have this `teams` table:
 
@@ -180,7 +181,7 @@ id | year | new_id |
 3  | 2006 | 2
 5  | 2007 | 4
 
-You can now remap the foreign keys on other tables pointing to teams.id
+You can now remap the foreign keys on other tables pointing to `teams.id`
 
 ```
 php drd remap remapTable removalsTable foreignKey
@@ -200,7 +201,7 @@ If your remapping doesn't finish the first time, just run it again. It won't hur
 
 Going back to the `people` table example...
 
-Finish remapping foreign keys for all tables that point to people.id
+Finish remapping foreign keys for all tables that point to `people.id`
 
 Now for the final coup-de-grace!
 
