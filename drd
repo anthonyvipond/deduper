@@ -3,8 +3,7 @@
 <?php
 
 use Symfony\Component\Console\Application;
-use DRT\ExtractCommand;
-use DRT\LinkCommand;
+use DRT\DedupeCommand;
 use DRT\RemapCommand;
 use DRT\DeleteCommand;
 
@@ -14,10 +13,9 @@ use DRT\DeleteCommand;
 require_once 'vendor/autoload.php';
 require_once 'config/database.php';
 
-$app = new Application('Database Deduplication and Remap Tool (Ellard)', '1.0');
+$app = new Application('Database Deduplication and Remap Tool', '1.0');
 
-$app->add(new ExtractCommand);
-$app->add(new LinkCommand);
+$app->add(new DedupeCommand);
 $app->add(new RemapCommand);
 $app->add(new DeleteCommand);
 
