@@ -113,24 +113,9 @@ class DedupeCommand extends BaseCommand {
         return $this->pdo->statement($sql);
     }
 
-    protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
-    {
-        $sql  = 'UPDATE ' . $removalsTable . ' LEFT JOIN ' . $uniquesTable . ' ON ';
-
-        foreach ($columns as $column) {
-            $sql .= $removalsTable . '.' . ticks($column) . ' = ' . $uniquesTable . '.' . ticks($column) . ' AND ';
-        }
-
-        $sql  = rtrim($sql, ' AND ') . ' ';
-
-        $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id WHERE new_id IS NULL';
-
-        return $this->pdo->statement($sql);
-    }
-
     // protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
     // {
-    //     $sql  = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON new_id IS NULL AND ';
+    //     $sql  = 'UPDATE ' . $removalsTable . ' LEFT JOIN ' . $uniquesTable . ' ON ';
 
     //     foreach ($columns as $column) {
     //         $sql .= $removalsTable . '.' . ticks($column) . ' = ' . $uniquesTable . '.' . ticks($column) . ' AND ';
@@ -138,10 +123,25 @@ class DedupeCommand extends BaseCommand {
 
     //     $sql  = rtrim($sql, ' AND ') . ' ';
 
-    //     $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
+    //     $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id WHERE new_id IS NULL';
 
     //     return $this->pdo->statement($sql);
     // }
+
+    protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
+    {
+        $sql  = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON new_id IS NULL AND ';
+
+        foreach ($columns as $column) {
+            $sql .= $removalsTable . '.' . ticks($column) . ' = ' . $uniquesTable . '.' . ticks($column) . ' AND ';
+        }
+
+        $sql  = rtrim($sql, ' AND ') . ' ';
+
+        $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
+
+        return $this->pdo->statement($sql);
+    }
 
     protected function insertUniquesFromOriginalTableToUniquesTable($originalTable, $uniquesTable, array $columns)
     {
