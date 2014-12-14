@@ -1,4 +1,4 @@
-MySQL Database Dedupe and Remap Tool
+MySQL DB Dedupe and Remap Tool
 ======================
 
 Purpose
@@ -32,6 +32,9 @@ And install dependencies:
 ```bash
     composer install
 ```
+
+Copy `config/database.php.sample` to `config/database.php` and fill it out
+
 
 You should now be able to use the program from the command line (where drt file is stored)
 ```
@@ -76,7 +79,7 @@ id | name
 You will also get this table `people_removals`
 
 id | name | new_id
-------------- | -------------
+------------- | ------------- | -------------
 5  | Mary | 2
 6  | Joseph | 3
 7  | Joseph | 3
@@ -103,8 +106,8 @@ php drd dedupe tableName firstname:lastname:birthday
 
 You will get a new table `people_uniques`
 
-id | firstname | lastname | 
-------------- | ------------- | -------------
+id | firstname | lastname | birthday
+------------- | ------------- | ------------- | -------------
 2  | Mary  |  Smith | 1991-01-01
 3  | Joseph  |  Parker | 1984-02-02
 5  | Mary  |  Kate | 1981-08-08
@@ -113,7 +116,7 @@ id | firstname | lastname |
 And another table `people_removals`
 
 id | firstname | lastname | new_id
-------------- | ------------- | -------------
+------------- | ------------- | ------------- | -------------
 7  | Joseph  |  Parker | 1984-02-02 | 3
 
 
@@ -133,16 +136,17 @@ php drd dedupe tableName firstname:lastname
 
 Now `people_uniques` is like this:
 
-id | firstname | lastname | 
+id | firstname | lastname | birthday
 ------------- | ------------- | -------------
 2  | Mary  |  Smith | 1991-01-01
 3  | Joseph  |  Parker | 1984-02-02
 5  | Mary  |  Kate | 1981-08-08
 
+
 And `people_removals` is like this:
 
-id | firstname | lastname | new_id
-------------- | ------------- | -------------
+id | firstname | lastname | birthday | new_id
+------------- | ------------- | ------------- | -------------
 7  | Joseph  |  Parker | 1984-02-02 | 3
 6  | mary  |  kate | 2001-03-03 | 5
 
