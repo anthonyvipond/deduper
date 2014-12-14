@@ -90,7 +90,7 @@ id | name | new_id
 But what if you have a table where the uniqueness of defined over three columns? No problem.
 
 id | firstname | lastname | birthday
-------------- | ------------- | -------------
+------------- | ------------- | ------------- | -------------
 2  | Mary  |  Smith | 1991-01-01
 3  | Joseph  |  Parker | 1984-02-02
 5  | Mary  |  Kate | 1981-08-08
@@ -137,7 +137,7 @@ php drd dedupe tableName firstname:lastname
 Now `people_uniques` is like this:
 
 id | firstname | lastname | birthday
-------------- | ------------- | -------------
+------------- | ------------- | ------------- | -------------
 2  | Mary  |  Smith | 1991-01-01
 3  | Joseph  |  Parker | 1984-02-02
 5  | Mary  |  Kate | 1981-08-08
@@ -146,10 +146,9 @@ id | firstname | lastname | birthday
 And `people_removals` is like this:
 
 id | firstname | lastname | birthday | new_id
-------------- | ------------- | ------------- | -------------
+------------- | ------------- | ------------- | ------------- | -------------
 7  | Joseph  |  Parker | 1984-02-02 | 3
 6  | mary  |  kate | 2001-03-03 | 5
-
 
 
 ###Remapping####
