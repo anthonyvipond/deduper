@@ -30,7 +30,7 @@ class RemapCommand extends BaseCommand {
 
         $this->info('Getting lookup method...');
         $remapMethod = $this->getRemapMethod($removalsTable, $remapTable);
-        $this->feedback('Will use ' . $remapMethod . ' lookup method');
+        $this->feedback('Will use ' . $remapMethod . ' remap method');
 
         $remapMethod .= 'Remap';
         $this->$remapMethod($remapTable, $removalsTable, $foreignKey, $startId);
@@ -75,14 +75,22 @@ class RemapCommand extends BaseCommand {
 
     protected function standardRemap($remapTable, $removalsTable, $foreignKey, $startId)
     {   
+        $totalAffectedRows = 0;
+
+        $percentFinished = 0.00;
+
+        $totalRows = $this->pdo->getTotalRows($removalsTable);
+
+        $rowsLooped = 0;
+
         if ( ! $this->pdo->indexExists($remapTable, $foreignKey . '_drt')) {
-            $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed remap process...');
+            $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed up process...');
             $this->pdo->createIndex($remapTable, $foreignKey, $foreignKey . '_drt');
             $this->feedback('Created index ' . $foreignKey . '_drt on ' . $remapTable);
         }
 
         if ( ! $this->pdo->indexExists($removalsTable, 'new_id_drt')) {
-            $this->info('Creating index new_id_drt on ' . $removalsTable . ' to speed lookup process...');
+            $this->info('Creating index new_id_drt on ' . $removalsTable . ' to speed up process...');
             $this->pdo->createIndex($removalsTable, 'new_id', 'new_id_drt');
             $this->feedback('Created index new_id_drt on ' . $removalsTable);
         }
@@ -102,10 +110,15 @@ class RemapCommand extends BaseCommand {
                                      ->where($foreignKey, $i)
                                      ->update([$foreignKey => $newId]);
 
-            $this->info('Updated ' . $remapTable . '.' . $foreignKey . ' from ' . $i . ' to ' . $newId);
+            $totalAffectedRows += $affectedRows;
 
-            $affectedRows ? $this->feedback($affectedRows . ' affected rows') : $this->comment('0 affected rows');
-            
+            if (++$rowsLooped / $totalRows > $percentFinished) {
+                $this->feedback('Remapped ' . $percentFinished * 100 . '% (' . pretty($totalAffectedRows) . ' rows remapped)');
+                $percentFinished += 0.02;
+            } elseif ($rowsLooped / $totalRows == 1) {
+                $this->feedback('Remapped 100% (' . pretty($totalAffectedRows) . ' rows remapped)');
+            }
+
             $i = $this->pdo->getNextId($i, $removalsTable);
         }
     }
