@@ -10,7 +10,7 @@ class DedupeCommand extends BaseCommand {
 
     public function configure()
     {
-        $this->setName('extract')
+        $this->setName('dedupe')
              ->setDescription('Dedupe a table and break into keepers and throwaways. Link throwaways to new keeper id')
              ->addArgument('originalTable', InputArgument::REQUIRED, 'The original table with duplicates')
              ->addArgument('columns', InputArgument::REQUIRED, 'Columns that define row uniqueness');
@@ -29,15 +29,15 @@ class DedupeCommand extends BaseCommand {
         $this->info('Counting duplicate rows...');
 
         if ($firstRun) {
-            $duplicateRows = $this->pdo->getDuplicateRowCount($originalTable, $columns);
+            $dupes = $this->pdo->getDuplicateRowCount($originalTable, $columns);
         } else {
-            $duplicateRows = $this->pdo->getDuplicateRowCount($uniquesTable, $columns);
+            $dupes = $this->pdo->getDuplicateRowCount($uniquesTable, $columns);
         }
-        if ($duplicateRows === 0) {
+        if ($dupes === 0) {
             $this->feedback('There are no duplicates using columns: ' . commaSeperate($columns)); die;
         } else {
             $table = $firstRun ? $originalTable : $uniquesTable;
-            $this->feedback('There are ' . $duplicateRows . ' dupes in ' . $table . ' on: ' . commaSeperate($columns));
+            $this->feedback('There are ' . pretty($dupes) . ' dupes in ' . $table . ' on ' . commaSeperate($columns));
             unset($table);
         }
 
@@ -46,25 +46,23 @@ class DedupeCommand extends BaseCommand {
             $this->pdo->statement('CREATE TABLE ' . $uniquesTable . ' LIKE ' . $originalTable);
             $this->feedback('Created uniques table');
 
-            $this->info('Creating composite index on ' . $originalTable . ' to speed things up...');
-            $this->pdo->createCompositeIndex($originalTable, $columns);
-            $this->feedback('Created composite index on ' . $originalTable);
+            if ( ! $this->pdo->indexExists($originalTable, implode('_', $columns))) {
+                $this->info('Creating comp index on ' . $originalTable . ' on ' . commaSeperate($columns) . ' to speed process...');
+                $this->pdo->createCompositeIndex($originalTable, $columns);
+                $this->feedback('Created composite index on ' . $originalTable);
+            }
 
             $this->info('Creating removals table: ' . $removalsTable);
             $this->pdo->statement('CREATE TABLE ' . $removalsTable . ' LIKE ' . $originalTable);
             $this->feedback('Created removals table');
 
-            $this->info('Adding composite index to ' . $removalsTable . ' to speed things up...');
-            $this->pdo->createCompositeIndex($removalsTable, $columns, 'new_id');
-            $this->feedback('Added composite index for ' . $removalsTable);
-
             $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $uniquesTable . '...');
             $this->pdo->addIntegerColumn($removalsTable, 'new_id');
             $this->feedback('Added new_id field to ' . $removalsTable);
 
-            $this->info('Inserted uniques to table: ' . $uniquesTable);
+            $this->info('Inserting uniques to ' . $uniquesTable . '...');
             $affectedRows = $this->insertUniquesFromOriginalTableToUniquesTable($originalTable, $uniquesTable, $columns);
-            $this->feedback('Inserted ' . $affectedRows . ' unique rows from ' . $originalTable . ' to ' . $uniquesTable);
+            $this->feedback('Inserted ' . pretty($affectedRows) . ' unique rows from ' . $originalTable . ' to ' . $uniquesTable);
         } else {
             $this->info('Inserted current uniques to temp table...');
             $this->pdo->statement('CREATE TEMPORARY TABLE ' . ($tempTable = 'temp_uniques') . ' LIKE ' . $uniquesTable);
@@ -75,21 +73,35 @@ class DedupeCommand extends BaseCommand {
             $this->feedback('Inserted ' . $affectedRows . ' unique rows from ' . $uniquesTable . ' to ' . $tempTable);
         }
 
+        array_unshift($columns, 'id');
+        if ( ! $this->pdo->indexExists($uniquesTable, implode('_', $columns))) {
+            $this->info('Creating comp index on ' . $uniquesTable . ' on ' . commaSeperate($columns) . ' to speed process...');
+            $this->pdo->createCompositeIndex($uniquesTable, $columns);
+            $this->feedback('Created composite index on ' . $uniquesTable);
+        }
+        array_shift($columns);
+
         $this->info('Inserting duplicate rows to ' . $removalsTable . '...');
         $undedupedTable = $firstRun ? $originalTable : $uniquesTable;
         $dedupedTable   = $firstRun ? $uniquesTable  : $tempTable;
         $affectedRows   = $this->insertDuplicatesToRemovalsTable($undedupedTable, $dedupedTable, $removalsTable);
-        $this->feedback('Inserted ' . number_format($affectedRows) . ' duplicates to ' . $removalsTable);
+        $this->feedback('Inserted ' . pretty($affectedRows) . ' duplicates to ' . $removalsTable);
+
+        array_unshift($columns, 'new_id');
+        $this->info('Adding comp index to ' . $removalsTable . ' on ' . commaSeperate($columns) . ' to speed process...');
+        $this->pdo->createCompositeIndex($removalsTable, $columns);
+        $this->feedback('Added composite index for ' . $removalsTable);
+        array_shift($columns);
 
         if ( ! $firstRun) {
             $this->info('Delete duplicate rows in ' . $uniquesTable . '...');
             $affectedRows = $this->deleteDuplicatesFromUniquesTable($uniquesTable, $removalsTable);
-            $this->feedback('Deleted ' . number_format($affectedRows) . ' rows ' . $removalsTable);
+            $this->feedback('Deleted ' . pretty($affectedRows) . ' rows ' . $removalsTable);
         }
 
-        $this->info('Adding new ids to removals table...');
+        $this->info('Adding new ids to removals table. This may take a while but will succeed :)');
         $affectedRows = $this->insertNewIdsToRemovalsTable($originalTable, $removalsTable, $columns);
-        $this->feedback('Linked ' . $affectedRows . ' records on new_id in ' . $removalsTable);
+        $this->feedback('Linked ' . pretty($affectedRows) . ' records on new_id in ' . $removalsTable);
     }
 
     protected function insertCurrentUniqueRowsToTempTable($uniquesTable, $tempTable, array $columns)
@@ -101,17 +113,17 @@ class DedupeCommand extends BaseCommand {
         return $this->pdo->statement($sql);
     }
 
-    protected function insertNewIdsToRemovalsTable($originalTable, $removalsTable, array $columns)
+    protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
     {
-        $sql = 'UPDATE ' . $removalsTable . ' JOIN ' . $originalTable . ' ON ';
+        $sql  = 'UPDATE ' . $removalsTable . ' JOIN ' . $uniquesTable . ' ON new_id IS NULL AND ';
 
         foreach ($columns as $column) {
-            $sql .= $originalTable . '.' . ticks($column) . ' = ' . $removalsTable . '.' . ticks($column) . ' AND ';
+            $sql .= $removalsTable . '.' . ticks($column) . ' = ' . $uniquesTable . '.' . ticks($column) . ' AND ';
         }
 
-        $sql .= 'new_id IS NULL ';
+        $sql  = rtrim($sql, ' AND ') . ' ';
 
-        $sql .= 'SET ' . $removalsTable . '.new_id = ' . $originalTable . '.id';
+        $sql .= 'SET ' . $removalsTable . '.new_id = ' . $uniquesTable . '.id';
 
         return $this->pdo->statement($sql);
     }
