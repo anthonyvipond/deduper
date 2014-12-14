@@ -3,9 +3,10 @@
 <?php
 
 use Symfony\Component\Console\Application;
-use DRT\DedupeCommand;
-use DRT\RemapCommand;
+use DRT\ExtractCommand;
 use DRT\LinkCommand;
+use DRT\RemapCommand;
+use DRT\DeleteCommand;
 
  ini_set('memory_limit','-1');
  set_time_limit(0);
@@ -13,14 +14,11 @@ use DRT\LinkCommand;
 require_once 'vendor/autoload.php';
 require_once 'config/database.php';
 
-$app = new Application('Dedupe and Remap Tool (DRT)', '1.0');
+$app = new Application('Database Deduplication and Remap Tool (Ellard)', '1.0');
 
-$app->add(new DedupeCommand);
+$app->add(new ExtractCommand);
 $app->add(new LinkCommand);
 $app->add(new RemapCommand);
+$app->add(new DeleteCommand);
 
 $app->run();
-
-// use Illuminate\Database\Capsule\Manager as Capsule;
-//     Capsule::schema()->create('orders', function($table) {
-// });
