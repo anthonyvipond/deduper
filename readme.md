@@ -60,7 +60,7 @@ id | name
 php drt dedupe tableName columnName
 ```
 
-i.e.
+**i.e.**
 
 ```
 php drt dedupe people name
@@ -100,7 +100,7 @@ id | firstname | lastname | birthday
 Seperate the columns with a `:` in the second argument:
 
 ```
-php drd dedupe tableName firstname:lastname:birthday
+php drd dedupe people firstname:lastname:birthday
 ```
 
 You will get a new table `people_uniques`
@@ -123,7 +123,7 @@ id | firstname | lastname | new_id
 
 You can continue to deduplicate on different columns.
 
-Your uniques table will get smaller, and your removals table will get bigger.
+Your `uniques` table will get smaller, and `your` removals table will get bigger.
 
 Take another look at the last stage our tables were in.
 
@@ -152,7 +152,7 @@ id | firstname | lastname | birthday | new_id
 
 ###Remapping####
 
-After you ran the `dedupe` command you will have **table_uniques** and **table_removals**, as well as your original table.
+After you run `dedupe` you will have **table_uniques** and **table_removals**, as well as your original table.
 
 The removals table **needs to be present** for remapping to work. 
 
@@ -187,12 +187,12 @@ You can now remap the foreign keys on other tables pointing to `teams.id`
 php drd remap remapTable removalsTable foreignKey
 ```
 
-i.e.
+**i.e.**
 ```
 php drd remap champions teams_removals team_id
 ```
 
-You should backup your remap table prior to running the remap command.
+You should backup your remap table prior to running the `remap` command.
 
 If your remapping doesn't finish the first time, just run it again. It won't hurt anything.
 
@@ -208,6 +208,7 @@ Now for the final coup-de-grace!
 ```sql
 RENAME TABLE table TO table_bak;
 RENAME TABLE table_uniques TO table;
+DROP TABLE table_bak -- optional
 ```
 
 Congrats! You've deduped and remapped your table.
