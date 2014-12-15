@@ -46,6 +46,14 @@ class RemapCommand extends BaseCommand {
 
     protected function reverseRemap($remapTable, $removalsTable, $foreignKey, $startId)
     {
+        $totalAffectedRows = 0;
+
+        $percentFinished = 0.00;
+
+        $totalRows = $this->pdo->getTotalRows($removalsTable);
+
+        $rowsLooped = 0;
+
         $i = is_null($this->db->table($remapTable)->find($startId)) ? $this->db->table($remapTable)->min('id') : $startId;
 
         while (is_int($i)) {
@@ -58,15 +66,20 @@ class RemapCommand extends BaseCommand {
 
                 if ( ! is_null($newId)) {
                     $affectedRows = $this->db->table($remapTable)->where('id', $i)->update([$foreignKey => $newId]);
-
-                    $this->feedback('Updated ' . $remapTable . '.' . $foreignKey . ' from ' . $i . ' to ' . $newId);
-
-                    $affectedRows ? $this->info($affectedRows . ' affected rows') : $this->comment($affectedRows . ' affected rows');
                 } else {
                     $this->feedback($removalsTable . '.' . $foreignKey . ' was null. continuing...');
                 }
             } else {
                 $this->feedback($remapTable . '.' . $foreignKey . ' was null. continuing...');
+            }
+
+            $totalAffectedRows += $affectedRows;
+
+            if (++$rowsLooped / $totalRows > $percentFinished) {
+                $this->feedback('Remapped ' . $percentFinished * 100 . '% (' . pretty($totalAffectedRows) . ' rows remapped)');
+                $percentFinished += 0.02;
+            } elseif ($rowsLooped / $totalRows == 1) {
+                $this->feedback('Remapped 100% (' . pretty($totalAffectedRows) . ' rows remapped)');
             }
 
             $i = $this->pdo->getNextId($i, $remapTable);
@@ -83,11 +96,11 @@ class RemapCommand extends BaseCommand {
 
         $rowsLooped = 0;
 
-        if ( ! $this->pdo->indexExists($remapTable, $foreignKey . '_drt')) {
-            $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed up process...');
-            $this->pdo->createIndex($remapTable, $foreignKey, $foreignKey . '_drt');
-            $this->feedback('Created index ' . $foreignKey . '_drt on ' . $remapTable);
-        }
+        // if ( ! $this->pdo->indexExists($remapTable, $foreignKey . '_drt')) {
+        //     $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed up process...');
+        //     $this->pdo->createIndex($remapTable, $foreignKey, $foreignKey . '_drt');
+        //     $this->feedback('Created index ' . $foreignKey . '_drt on ' . $remapTable);
+        // }
 
         if ( ! $this->pdo->indexExists($removalsTable, 'new_id_drt')) {
             $this->info('Creating index new_id_drt on ' . $removalsTable . ' to speed up process...');

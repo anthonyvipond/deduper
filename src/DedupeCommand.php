@@ -22,7 +22,7 @@ class DedupeCommand extends BaseCommand {
 
         $originalTable = $input->getArgument('originalTable');
         $uniquesTable  = $originalTable . '_uniques';
-        $removalsTable = $originalTable . '_removals';
+        $removalsTable = $originalTable . '_removes';
         $columns       = explode(':', $input->getArgument('columns'));
         $firstRun      = ! $this->pdo->tableExists($uniquesTable);
 
