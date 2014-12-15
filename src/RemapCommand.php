@@ -104,11 +104,11 @@ class RemapCommand extends BaseCommand {
         //     }
         // }
 
-        if ( ! $this->pdo->indexExists($removalsTable, 'new_id_drt')) {
-            $this->info('Creating index new_id_drt on ' . $removalsTable . ' to speed up process...');
-            $this->pdo->createIndex($removalsTable, 'new_id', 'new_id_drt');
-            $this->feedback('Created index new_id_drt on ' . $removalsTable);
-        }
+        // if ( ! $this->pdo->indexExists($removalsTable, 'new_id_drt')) {
+        //     $this->info('Creating index new_id_drt on ' . $removalsTable . ' to speed up process...');
+        //     $this->pdo->createIndex($removalsTable, 'new_id', 'new_id_drt');
+        //     $this->feedback('Created index new_id_drt on ' . $removalsTable);
+        // }
 
         if (is_null($this->db->table($removalsTable)->find($startId))) {
             $i = $this->pdo->getNextId(1, $removalsTable);
