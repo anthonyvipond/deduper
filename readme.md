@@ -38,7 +38,7 @@ Copy `config/database.php.sample` to `config/database.php` and fill it out
 
 You should now be able to use the program from the command line (where drt file is stored)
 ```
-php drd
+php drt
 ```
 
 Purpose
@@ -100,7 +100,7 @@ id | firstname | lastname | birthday
 Seperate the columns with a `:` in the second argument:
 
 ```
-php drd dedupe people firstname:lastname:birthday
+php drt dedupe people firstname:lastname:birthday
 ```
 
 You will get a new table `people_uniques`
@@ -130,7 +130,7 @@ Take another look at the last stage our tables were in.
 Let's keep deduplicating further on new rules...
 
 ```
-php drd dedupe tableName firstname:lastname
+php drt dedupe tableName firstname:lastname
 ```
 
 Now `people_uniques` is like this:
@@ -184,12 +184,12 @@ id | year | new_id |
 You can now remap the foreign keys on other tables pointing to `teams.id`
 
 ```
-php drd remap remapTable removalsTable foreignKey
+php drt remap remapTable removalsTable foreignKey
 ```
 
 **i.e.**
 ```
-php drd remap champions teams_removals team_id
+php drt remap champions teams_removals team_id
 ```
 
 You should backup your remap table prior to running the `remap` command.
