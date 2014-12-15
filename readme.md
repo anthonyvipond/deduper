@@ -114,9 +114,9 @@ id | firstname | lastname | birthday
 
 And another table `people_removals`
 
-id | firstname | lastname | new_id
+id | firstname | lastname | birthday | new_id
 ------------- | ------------- | ------------- | -------------
-7  | Joseph  |  Parker | 1984-02-02 | 3
+7 | Joseph | Parker | 1984-02-02 | 3
 
 
 ----------------------------
