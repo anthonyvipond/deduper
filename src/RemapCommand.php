@@ -93,7 +93,6 @@ class RemapCommand extends BaseCommand {
         $percentFinished = 0.00;
 
         $totalRows = $this->pdo->getTotalRows($removalsTable);
-        $this->feedback($removalsTable ' has ' . $totalRows . ' rows');
 
         $rowsLooped = 0;
 
