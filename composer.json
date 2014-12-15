@@ -1,7 +1,7 @@
 {
     "name": "anthonyvipond/deduper",
     "description": "Deduplicate and remap your database tables",
-    "keywords"    : ["dedupe", "deduplicate", "database", "remap"],
+    "keywords"    : ["dedupe", "deduplicate", "database", "remap", "mysql"],
     "license"     : "MIT",
     "authors": [
         {
@@ -19,11 +19,5 @@
         "psr-4": {
             "DRT\\" : "src"
         }
-    },
-    "repositories": [
-        {
-          "type": "vcs",
-          "url": "https://github.com/anthonyvipond/simple-pdo.git"
-        }
-    ]
+    }
 }
