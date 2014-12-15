@@ -81,7 +81,7 @@ class RemapCommand extends BaseCommand {
             } else {
                 $this->feedback($remapTable . '.' . $foreignKey . ' was null. continuing...');
             }
-            
+
             $i = $this->pdo->getNextId($i, $remapTable);
         }
     }
@@ -93,13 +93,16 @@ class RemapCommand extends BaseCommand {
         $percentFinished = 0.00;
 
         $totalRows = $this->pdo->getTotalRows($removalsTable);
+        $this->feedback($removalsTable ' has ' . $totalRows . ' rows');
 
         $rowsLooped = 0;
 
-        // if ( ! $this->pdo->indexExists($remapTable, $foreignKey . '_drt')) {
-        //     $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed up process...');
-        //     $this->pdo->createIndex($remapTable, $foreignKey, $foreignKey . '_drt');
-        //     $this->feedback('Created index ' . $foreignKey . '_drt on ' . $remapTable);
+        // if ($remapRows > 500000) {
+        //     if ( ! $this->pdo->indexExists($remapTable, $foreignKey . '_drt')) {
+        //         $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed up process...');
+        //         $this->pdo->createIndex($remapTable, $foreignKey, $foreignKey . '_drt');
+        //         $this->feedback('Created index ' . $foreignKey . '_drt on ' . $remapTable);
+        //     }
         // }
 
         if ( ! $this->pdo->indexExists($removalsTable, 'new_id_drt')) {
