@@ -88,12 +88,6 @@ class RemapCommand extends BaseCommand {
 
     protected function standardRemap($remapTable, $removalsTable, $foreignKey, $startId)
     {   
-        if ( ! $this->pdo->indexExists($remapTable, implode('_', $columns))) {
-            $this->info('Adding comp index to ' . $remapTable . ' on ' . commaSeperate($columns) . ' to speed process...');
-            $this->pdo->createCompositeIndex($remapTable, $columns);
-            $this->feedback('Added composite index for ' . $remapTable);
-        }
-        
         $totalAffectedRows = 0;
 
         $percentFinished = 0.00;
