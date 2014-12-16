@@ -88,6 +88,12 @@ class RemapCommand extends BaseCommand {
 
     protected function standardRemap($remapTable, $removalsTable, $foreignKey, $startId)
     {   
+        if ( ! $this->pdo->indexExists($remapTable, implode('_', $columns))) {
+            $this->info('Adding comp index to ' . $remapTable . ' on ' . commaSeperate($columns) . ' to speed process...');
+            $this->pdo->createCompositeIndex($remapTable, $columns);
+            $this->feedback('Added composite index for ' . $remapTable);
+        }
+        
         $totalAffectedRows = 0;
 
         $percentFinished = 0.00;
@@ -95,20 +101,6 @@ class RemapCommand extends BaseCommand {
         $totalRows = $this->pdo->getTotalRows($removalsTable);
 
         $rowsLooped = 0;
-
-        // if ($remapRows > 500000) {
-        //     if ( ! $this->pdo->indexExists($remapTable, $foreignKey . '_drt')) {
-        //         $this->info('Creating index ' . $foreignKey . '_drt on ' . $remapTable . ' to speed up process...');
-        //         $this->pdo->createIndex($remapTable, $foreignKey, $foreignKey . '_drt');
-        //         $this->feedback('Created index ' . $foreignKey . '_drt on ' . $remapTable);
-        //     }
-        // }
-
-        // if ( ! $this->pdo->indexExists($removalsTable, 'new_id_drt')) {
-        //     $this->info('Creating index new_id_drt on ' . $removalsTable . ' to speed up process...');
-        //     $this->pdo->createIndex($removalsTable, 'new_id', 'new_id_drt');
-        //     $this->feedback('Created index new_id_drt on ' . $removalsTable);
-        // }
 
         if (is_null($this->db->table($removalsTable)->find($startId))) {
             $i = $this->pdo->getNextId(1, $removalsTable);
