@@ -114,6 +114,8 @@ class RemapCommand extends BaseCommand {
             }
 
             $i = $this->pdo->getNextId($i, $removalsTable);
+            
+            $this->feedback($i . ': affected rows: ' . $affectedRows);
         }
     }
 

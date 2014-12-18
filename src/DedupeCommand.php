@@ -85,13 +85,13 @@ class DedupeCommand extends BaseCommand {
         $affectedRows   = $this->insertDuplicatesToRemovalsTable($undedupedTable, $dedupedTable, $removalsTable);
         $this->feedback('Inserted ' . pretty($affectedRows) . ' duplicates to ' . $removalsTable);
 
-        array_push($columns, 'new_id');
+        // array_push($columns, 'new_id');
         if ( ! $this->pdo->indexExists($removalsTable, implode('_', $columns))) {
             $this->info('Adding comp index to ' . $removalsTable . ' on ' . commaSeperate($columns) . ' to speed process...');
             $this->pdo->createCompositeIndex($removalsTable, $columns);
             $this->feedback('Added composite index for ' . $removalsTable);
         }
-        array_pop($columns);
+        // array_pop($columns);
 
         if ( ! $firstRun) {
             $this->info('Deleting duplicate rows in ' . $uniquesTable . '...');
