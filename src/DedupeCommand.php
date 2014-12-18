@@ -128,7 +128,7 @@ class DedupeCommand extends BaseCommand {
         while ($i) {
             $row = $this->db->table($uniquesTable)->select($columns)->where('id', $i)->first();
 
-            $affectedRows = $this->db->table($removalsTable)->where($row)->whereNull('new_id')->update(['new_id' => $i]);
+            $affectedRows = $this->db->table($removalsTable)->where($row + ['new_id' => null])->update(['new_id' => $i]);
 
             $totalAffectedRows += $affectedRows;
 
