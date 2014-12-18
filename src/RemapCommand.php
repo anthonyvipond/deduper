@@ -48,11 +48,7 @@ class RemapCommand extends BaseCommand {
     {
         $totalAffectedRows = 0;
 
-        $percentFinished = 0.00;
-
         $totalRows = $this->pdo->getTotalRows($removalsTable);
-
-        $rowsLooped = 0;
 
         $i = is_null($this->db->table($remapTable)->find($startId)) ? $this->db->table($remapTable)->min('id') : $startId;
 
@@ -69,12 +65,7 @@ class RemapCommand extends BaseCommand {
 
                     $totalAffectedRows += $affectedRows;
 
-                    if (++$rowsLooped / $totalRows > $percentFinished) {
-                        $this->feedback('Remapped ' . $percentFinished * 100 . '% (' . pretty($totalAffectedRows) . ' rows remapped)');
-                        $percentFinished += 0.02;
-                    } elseif ($rowsLooped / $totalRows == 1) {
-                        $this->feedback('Remapped 100% (' . pretty($totalAffectedRows) . ' rows remapped)');
-                    }
+                    $this->feedback('Remapped ' . pretty($totalAffectedRows) . ' rows');
                 } else {
                     $this->feedback($removalsTable . '.' . $foreignKey . ' was null. continuing...');
                 }
@@ -84,6 +75,8 @@ class RemapCommand extends BaseCommand {
 
             $i = $this->pdo->getNextId($i, $remapTable);
         }
+
+        $this->feedback('Remapped ' . $totalAffectedRows . ' rows');
     }
 
     protected function standardRemap($remapTable, $removalsTable, $foreignKey, $startId)
