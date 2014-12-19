@@ -116,7 +116,7 @@ And another table `people_removals`
 
 id | firstname | lastname | birthday | new_id
 ------------- | ------------- | ------------- | ------------- | -------------
-7 | Joseph | Parker | 1984-02-02 | 3
+7 | Joseph | Parker | 1984-02-02 | null
 
 
 ----------------------------
@@ -146,9 +146,22 @@ And `people_removals` is like this:
 
 id | firstname | lastname | birthday | new_id
 ------------- | ------------- | ------------- | ------------- | -------------
-7  | Joseph  |  Parker | 1984-02-02 | 3
-6  | mary  |  kate | 2001-03-03 | 5
+7  | Joseph  |  Parker | 1984-02-02 | null
+6  | mary  |  kate | 2001-03-03 | null
 
+
+###Linking####
+
+The next stage is add the new ids to the `removes` table
+
+```
+php drt link uniquesTable removesTable col1:col2:col3
+```
+
+*ie*
+```
+php drt link people_uniques people_removals firstname:lastname:birthday
+```
 
 ###Remapping####
 

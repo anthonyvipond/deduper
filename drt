@@ -4,6 +4,7 @@
 
 use Symfony\Component\Console\Application;
 use DRT\DedupeCommand;
+use DRT\LinkCommand;
 use DRT\RemapCommand;
 
 ini_set('memory_limit','-1');
@@ -15,6 +16,7 @@ require_once 'config/database.php';
 $app = new Application('Database Deduplication and Remap Tool', '1.0');
 
 $app->add(new DedupeCommand);
+$app->add(new LinkCommand);
 $app->add(new RemapCommand);
 
 $app->run();
