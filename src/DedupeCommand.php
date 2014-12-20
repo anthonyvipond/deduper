@@ -18,7 +18,7 @@ class DedupeCommand extends BaseCommand {
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->init($output);
+        $this->output = $output;
 
         $originalTable = $input->getArgument('originalTable');
         $uniquesTable  = $originalTable . '_uniques';
@@ -33,12 +33,12 @@ class DedupeCommand extends BaseCommand {
         } else {
             $dupes = $this->pdo->getDuplicateRowCount($uniquesTable, $columns);
         }
+
         if ($dupes === 0) {
             $this->feedback('There are no duplicates using columns: ' . commaSeperate($columns)); die;
         } else {
-            $table = $firstRun ? $originalTable : $uniquesTable;
-            $this->feedback('There are ' . pretty($dupes) . ' dupes in ' . $table . ' on ' . commaSeperate($columns));
-            unset($table);
+            $undedupedTable = $firstRun ? $originalTable : $uniquesTable;
+            $this->feedback('There are ' . pretty($dupes) . ' dupes in ' . $undedupedTable . ' on ' . commaSeperate($columns));
         }
 
         if ($firstRun) {
@@ -59,18 +59,10 @@ class DedupeCommand extends BaseCommand {
             $this->info('Adding new_id field to ' . $removalsTable . ' to store the id from ' . $uniquesTable . '...');
             $this->pdo->addIntegerColumn($removalsTable, 'new_id');
             $this->feedback('Added new_id field to ' . $removalsTable);
-
-            $this->info('Inserting uniques to ' . $uniquesTable . '...');
-            $affectedRows = $this->insertUniquesFromOriginalTableToUniquesTable($originalTable, $uniquesTable, $columns);
-            $this->feedback('Inserted ' . pretty($affectedRows) . ' unique rows from ' . $originalTable . ' to ' . $uniquesTable);
         } else {
-            $this->info('Inserted current uniques to temp table...');
+            $this->info('Creating temp_uniques table...');
             $this->pdo->statement('CREATE TEMPORARY TABLE ' . ($tempTable = 'temp_uniques') . ' LIKE ' . $uniquesTable);
             $this->feedback('Created temporary table: ' . $tempTable);
-
-            $this->info('Inserting current unique rows on ' . $uniquesTable . ' to ' . $tempTable . '...');
-            $affectedRows = $this->insertCurrentUniqueRowsToTempTable($uniquesTable, $tempTable, $columns);
-            $this->feedback('Inserted ' . pretty($affectedRows) . ' unique rows from ' . $uniquesTable . ' to ' . $tempTable);
         }
 
         if ( ! $this->pdo->indexExists($uniquesTable, implode('_', $columns))) {
@@ -79,10 +71,14 @@ class DedupeCommand extends BaseCommand {
             $this->feedback('Created composite index on ' . $uniquesTable);
         }
 
+        $dedupedTable = $firstRun ? $uniquesTable : $tempTable;
+
+        $this->info('Inserting current unique rows on ' . $undedupedTable . ' to ' . $dedupedTable . '...');
+        $affectedRows = $this->insertUniquesToTable($undedupedTable, $dedupedTable, $columns);
+        $this->feedback('Inserted ' . pretty($affectedRows) . ' unique rows from ' . $undedupedTable . ' to ' . $dedupedTable);
+
         $this->info('Inserting duplicate rows to ' . $removalsTable . '...');
-        $undedupedTable = $firstRun ? $originalTable : $uniquesTable;
-        $dedupedTable   = $firstRun ? $uniquesTable  : $tempTable;
-        $affectedRows   = $this->insertDuplicatesToRemovalsTable($undedupedTable, $dedupedTable, $removalsTable);
+        $affectedRows = $this->insertDuplicatesToRemovalsTable($undedupedTable, $dedupedTable, $removalsTable);
         $this->feedback('Inserted ' . pretty($affectedRows) . ' duplicates to ' . $removalsTable);
 
         if ( ! $this->pdo->indexExists($removalsTable, implode('_', $columns))) {
@@ -96,58 +92,13 @@ class DedupeCommand extends BaseCommand {
             $affectedRows = $this->deleteDuplicatesFromUniquesTable($uniquesTable, $removalsTable);
             $this->feedback('Deleted ' . pretty($affectedRows) . ' rows ' . $removalsTable);
         }
-
-        // $this->info('Adding new ids to removals table...');
-        // $affectedRows = $this->insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, $columns);
-        // $this->feedback('Linked ' . pretty($affectedRows) . ' records on new_id in ' . $removalsTable);
     }
 
-    protected function insertCurrentUniqueRowsToTempTable($uniquesTable, $tempTable, array $columns)
+    protected function insertUniquesToTable($undedupedTable, $dedupedTable, array $columns)
     {
-        $sql  = 'INSERT ' . $tempTable . ' ';
+        $sql  = 'INSERT ' . $dedupedTable . ' ';
 
-        $sql .= 'SELECT * FROM ' . $uniquesTable . ' GROUP BY ' . tickCommaSeperate($columns);
-
-        return $this->pdo->statement($sql);
-    }
-
-    // protected function insertNewIdsToRemovalsTable($uniquesTable, $removalsTable, array $columns)
-    // {
-    //     $totalAffectedRows = 0;
-
-    //     $percentFinished = 0.00;
-
-    //     $totalRows = $this->pdo->getTotalRows($uniquesTable);
-
-    //     $rowsLooped = 0;
-
-    //     $i = $this->pdo->getNextId(0, $uniquesTable);
-
-    //     while ($i) {
-    //         $row = $this->db->table($uniquesTable)->select($columns)->where('id', $i)->first();
-
-    //         $affectedRows = $this->db->table($removalsTable)->where($row + ['new_id' => null])->update(['new_id' => $i]);
-
-    //         $totalAffectedRows += $affectedRows;
-
-    //         if (++$rowsLooped / $totalRows > $percentFinished) {
-    //             $this->feedback('Updated ' . $percentFinished * 100 . '% (' . pretty($totalAffectedRows) . ' rows updated)');
-    //             $percentFinished += 0.02;
-    //         } elseif ($rowsLooped / $totalRows == 1) {
-    //             $this->feedback('Updated 100% (' . pretty($totalAffectedRows) . ' rows updated)');
-    //         }
-
-    //         $i = $this->pdo->getNextId($i, $uniquesTable);
-    //     }
-
-    //     return $totalAffectedRows;
-    // }
-
-    protected function insertUniquesFromOriginalTableToUniquesTable($originalTable, $uniquesTable, array $columns)
-    {
-        $sql  = 'INSERT ' . $uniquesTable . ' ';
-
-        $sql .= 'SELECT * FROM ' . $originalTable . ' GROUP BY ' . tickCommaSeperate($columns);
+        $sql .= 'SELECT * FROM ' . $undedupedTable . ' GROUP BY ' . tickCommaSeperate($columns);
 
         return $this->pdo->statement($sql);
     }
@@ -159,7 +110,7 @@ class DedupeCommand extends BaseCommand {
         $sql .= 'SELECT * FROM ' . $undedupedTable . ' ';
 
         $sql .= 'WHERE id NOT IN ';
-
+        
         $sql .= '(SELECT id FROM ' . $dedupedTable . ')';
 
         return $this->pdo->statement($sql);

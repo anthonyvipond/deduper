@@ -21,7 +21,7 @@ class RemapCommand extends BaseCommand {
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->init($output);
+        $this->output = $output;
 
         $remapTable    = $input->getArgument('remapTable');
         $removalsTable = $input->getArgument('removalsTable');

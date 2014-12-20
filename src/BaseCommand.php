@@ -12,6 +12,16 @@ abstract class BaseCommand extends Command {
     protected $pdo;
     protected $creds;
 
+    public function __construct()
+    {
+        parent::__construct('DLR - Dedupe, Link and Remap');
+
+        global $dbCreds;
+
+        $this->pdo = new SimplePdo($dbCreds);
+        $this->db = $this->initDb(new Capsule);
+    }
+
     protected function feedback($string)
     {
         print $string . PHP_EOL;
@@ -47,15 +57,6 @@ abstract class BaseCommand extends Command {
         $capsule->bootEloquent();
 
         return $capsule;
-    }
-
-    protected function init($output)
-    {
-        global $dbCreds;
-
-        $this->output = $output;
-        $this->pdo = new SimplePdo($dbCreds);
-        $this->db = $this->initDb(new Capsule);
     }
 
 }
