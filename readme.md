@@ -36,9 +36,9 @@ And install dependencies:
 Copy `config/database.php.sample` to `config/database.php` and fill it out
 
 
-You should now be able to use the program from the command line (where drt file is stored)
+You should now be able to use the program from the command line (where dlr file is stored)
 ```
-php drt
+php dlr
 ```
 
 Purpose
@@ -57,13 +57,13 @@ id | name
 7  | Joseph
 
 ```
-php drt dedupe tableName columnName
+php dlr dedupe tableName columnName
 ```
 
 **i.e.**
 
 ```
-php drt dedupe people name
+php dlr dedupe people name
 ```
 
 Your original table will not be touched, and you will get this table `people_uniques`
@@ -79,9 +79,9 @@ You will also get this table `people_removals`
 
 id | name | new_id
 ------------- | ------------- | -------------
-5  | Mary | 2
-6  | Joseph | 3
-7  | Joseph | 3
+5  | Mary | null
+6  | Joseph | null
+7  | Joseph | null
 
 
 ----------------------------
@@ -100,7 +100,7 @@ id | firstname | lastname | birthday
 Seperate the columns with a `:` in the second argument:
 
 ```
-php drt dedupe people firstname:lastname:birthday
+php dlr dedupe people firstname:lastname:birthday
 ```
 
 You will get a new table `people_uniques`
@@ -130,7 +130,7 @@ Take another look at the last stage our tables were in.
 Let's keep deduplicating further on new rules...
 
 ```
-php drt dedupe tableName firstname:lastname
+php dlr dedupe tableName firstname:lastname
 ```
 
 Now `people_uniques` is like this:
@@ -155,13 +155,41 @@ id | firstname | lastname | birthday | new_id
 The next stage is add the new ids to the `removes` table
 
 ```
-php drt link uniquesTable removesTable col1:col2:col3
+php dlr link uniquesTable removesTable col1:col2:col3
 ```
 
 *ie*
 ```
-php drt link people_uniques people_removals firstname:lastname:birthday
+php dlr link people_uniques people_removals firstname:lastname:birthday
 ```
+
+When doing linking, you should pass in the same columns as you did when deduping
+
+If you ran the dedupe command several times with different combinations, you want to link from the least specific to the most.
+
+*ie*
+
+```
+php dlr link people_uniques people_removals lastname:placeOfBirth
+
+php dlr link people_uniques people_removals firstname:lastname:birthday
+```
+
+This way the more specific and higher quality groupings overwrite the lower quality ones
+
+If you ran the `dedupe` command multiple times on different rules, you may end up with a small percentage of records that weren't linked after running the `link` command
+
+You can pass the `--fillerMode` option to fill the rest with of the `new_id` with ids
+
+Check how many `new_id` have not been remapped after each run if you want:
+```sql
+SELECT count(1) FROM table_removes WHERE new_id IS NULL;
+```
+
+*ie*
+```
+php dlr link people_uniques people_removals firstname:lastname --fillerMode=true
+``` 
 
 ###Remapping####
 
@@ -197,12 +225,12 @@ id | year | new_id |
 You can now remap the foreign keys on other tables pointing to `teams.id`
 
 ```
-php drt remap remapTable removalsTable foreignKey
+php dlr remap remapTable removalsTable foreignKey
 ```
 
 **i.e.**
 ```
-php drt remap champions teams_removals team_id
+php dlr remap champions teams_removals team_id
 ```
 
 You should backup your remap table prior to running the `remap` command.

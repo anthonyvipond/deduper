@@ -1,6 +1,6 @@
 <?php
 
-namespace DRT;
+namespace DLR;
 
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -33,7 +33,9 @@ class RemapCommand extends BaseCommand {
         $this->feedback('Will use ' . $remapMethod . ' remap method');
 
         $remapMethod .= 'Remap';
-        $this->$remapMethod($remapTable, $removalsTable, $foreignKey, $startId);
+        $affectedRows = $this->$remapMethod($remapTable, $removalsTable, $foreignKey, $startId);
+
+        $this->feedback('Remapped ' . $affectedRows . ' rows on ' . $remapTable);
     }
 
     protected function getRemapMethod($removalsTable, $remapTable)
@@ -76,18 +78,14 @@ class RemapCommand extends BaseCommand {
             $i = $this->pdo->getNextId($i, $remapTable);
         }
 
-        $this->feedback('Remapped ' . $totalAffectedRows . ' rows');
+        return $totalAffectedRows;
     }
 
     protected function standardRemap($remapTable, $removalsTable, $foreignKey, $startId)
     {   
         $totalAffectedRows = 0;
 
-        $percentFinished = 0.00;
-
         $totalRows = $this->pdo->getTotalRows($removalsTable);
-
-        $rowsLooped = 0;
 
         if (is_null($this->db->table($removalsTable)->find($startId))) {
             $i = $this->pdo->getNextId(1, $removalsTable);
@@ -104,19 +102,16 @@ class RemapCommand extends BaseCommand {
                                      ->where($foreignKey, $i)
                                      ->update([$foreignKey => $newId]);
 
+            $feedback = $affectedRows ? 'feedback' : 'info';
+
+            $this->$feedback('Updated from ' . $removalsTable . '.id = ' . $i . ' (' . $affectedRows . ' rows updated)');
+
             $totalAffectedRows += $affectedRows;
 
-            if (++$rowsLooped / $totalRows > $percentFinished) {
-                $this->feedback('Remapped ' . $percentFinished * 100 . '% (' . pretty($totalAffectedRows) . ' rows remapped)');
-                $percentFinished += 0.02;
-            } elseif ($rowsLooped / $totalRows == 1) {
-                $this->feedback('Remapped 100% (' . pretty($totalAffectedRows) . ' rows remapped)');
-            }
-
             $i = $this->pdo->getNextId($i, $removalsTable);
-            
-            $this->feedback($i . ': affected rows: ' . $affectedRows);
         }
+
+        return $totalAffectedRows;
     }
 
 }

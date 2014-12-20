@@ -3,9 +3,9 @@
 <?php
 
 use Symfony\Component\Console\Application;
-use DRT\DedupeCommand;
-use DRT\LinkCommand;
-use DRT\RemapCommand;
+use DLR\DedupeCommand;
+use DLR\LinkCommand;
+use DLR\RemapCommand;
 
 ini_set('memory_limit','-1');
 set_time_limit(0);

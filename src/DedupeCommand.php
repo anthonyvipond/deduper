@@ -1,6 +1,6 @@
 <?php
 
-namespace DRT;
+namespace DLR;
 
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -110,7 +110,7 @@ class DedupeCommand extends BaseCommand {
         $sql .= 'SELECT * FROM ' . $undedupedTable . ' ';
 
         $sql .= 'WHERE id NOT IN ';
-        
+
         $sql .= '(SELECT id FROM ' . $dedupedTable . ')';
 
         return $this->pdo->statement($sql);
