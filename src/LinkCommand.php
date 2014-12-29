@@ -16,7 +16,7 @@ class LinkCommand extends BaseCommand {
              ->addArgument('uniques', InputArgument::REQUIRED, 'The uniques table')
              ->addArgument('removes', InputArgument::REQUIRED, 'The removes table')
              ->addArgument('columns', InputArgument::REQUIRED, 'Columns to link on')
-             ->addOption('fillerMode', null, InputOption::VALUE_OPTIONAL, 'Use to populate unmapped values in removes table', false);
+             ->addOption('fillerMode', null, InputOption::VALUE_OPTIONAL, 'Use to populate remaining null values in removes table', false);
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
@@ -28,7 +28,7 @@ class LinkCommand extends BaseCommand {
         $columns       = explode(':', $input->getArgument('columns'));
         $fillerMode    = (bool) $input->getOption('fillerMode');
 
-        $this->info('Adding new ids to removals table...');
+        $this->info('Adding new ids to removes table...');
         $affectedRows = $this->insertNewIdsToRemovesTable($uniquesTable, $removalsTable, $columns, $fillerMode);
         $this->feedback('Linked ' . pretty($affectedRows) . ' records on new_id in ' . $removalsTable);
     }

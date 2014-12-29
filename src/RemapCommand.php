@@ -14,7 +14,7 @@ class RemapCommand extends BaseCommand {
         $this->setName('remap')
              ->setDescription('Remap a table based off the removals table')
              ->addArgument('remapTable', InputArgument::REQUIRED, 'The table to be remapped')
-             ->addArgument('removalsTable', InputArgument::REQUIRED, 'The removals table containing the new ids')
+             ->addArgument('removesTable', InputArgument::REQUIRED, 'The removals table containing the new ids')
              ->addArgument('foreignKey', InputArgument::REQUIRED, 'The foreign key on the remap table getting remapped')
              ->addOption('startId', null, InputOption::VALUE_OPTIONAL, 'What id to start mapping from on the removals table', 1);
     }
@@ -24,33 +24,33 @@ class RemapCommand extends BaseCommand {
         $this->output = $output;
 
         $remapTable    = $input->getArgument('remapTable');
-        $removalsTable = $input->getArgument('removalsTable');
+        $removesTable = $input->getArgument('removesTable');
         $foreignKey    = $input->getArgument('foreignKey');
         $startId       = (int) $input->getOption('startId');
 
         $this->info('Getting lookup method...');
-        $remapMethod = $this->getRemapMethod($removalsTable, $remapTable);
+        $remapMethod = $this->getRemapMethod($removesTable, $remapTable);
         $this->feedback('Will use ' . $remapMethod . ' remap method');
 
         $remapMethod .= 'Remap';
-        $affectedRows = $this->$remapMethod($remapTable, $removalsTable, $foreignKey, $startId);
+        $affectedRows = $this->$remapMethod($remapTable, $removesTable, $foreignKey, $startId);
 
         $this->feedback('Remapped ' . $affectedRows . ' rows on ' . $remapTable);
     }
 
-    protected function getRemapMethod($removalsTable, $remapTable)
+    protected function getRemapMethod($removesTable, $remapTable)
     {
-        $removalsTableSize = $this->db->table($removalsTable)->count();
+        $removesTableSize = $this->db->table($removesTable)->count();
         $remapTableSize = $this->db->table($remapTable)->count();
 
-        return $removalsTableSize / $remapTableSize > 5 ? 'reverse' : 'standard';
+        return $removesTableSize / $remapTableSize > 5 ? 'reverse' : 'standard';
     }
 
-    protected function reverseRemap($remapTable, $removalsTable, $foreignKey, $startId)
+    protected function reverseRemap($remapTable, $removesTable, $foreignKey, $startId)
     {
         $totalAffectedRows = 0;
 
-        $totalRows = $this->pdo->getTotalRows($removalsTable);
+        $totalRows = $this->pdo->getTotalRows($removesTable);
 
         $i = is_null($this->db->table($remapTable)->find($startId)) ? $this->db->table($remapTable)->min('id') : $startId;
 
@@ -60,7 +60,7 @@ class RemapCommand extends BaseCommand {
             $remapRowFk = $remapRow[$foreignKey];
 
             if ( ! is_null($remapRowFk)) {
-                $newId = $this->db->table($removalsTable)->find($remapRowFk)['new_id'];
+                $newId = $this->db->table($removesTable)->find($remapRowFk)['new_id'];
 
                 if ( ! is_null($newId)) {
                     $affectedRows = $this->db->table($remapTable)->where('id', $i)->update([$foreignKey => $newId]);
@@ -69,7 +69,7 @@ class RemapCommand extends BaseCommand {
 
                     $this->feedback('Remapped ' . pretty($totalAffectedRows) . ' rows');
                 } else {
-                    $this->feedback($removalsTable . '.' . $foreignKey . ' was null. continuing...');
+                    $this->feedback($removesTable . '.' . $foreignKey . ' was null. continuing...');
                 }
             } else {
                 $this->feedback($remapTable . '.' . $foreignKey . ' was null. continuing...');
@@ -81,20 +81,20 @@ class RemapCommand extends BaseCommand {
         return $totalAffectedRows;
     }
 
-    protected function standardRemap($remapTable, $removalsTable, $foreignKey, $startId)
+    protected function standardRemap($remapTable, $removesTable, $foreignKey, $startId)
     {   
         $totalAffectedRows = 0;
 
-        $totalRows = $this->pdo->getTotalRows($removalsTable);
+        $totalRows = $this->pdo->getTotalRows($removesTable);
 
-        if (is_null($this->db->table($removalsTable)->find($startId))) {
-            $i = $this->pdo->getNextId(1, $removalsTable);
+        if (is_null($this->db->table($removesTable)->find($startId))) {
+            $i = $this->pdo->getNextId(1, $removesTable);
         } else {
             $i = $startId;
         }
 
         while ($i) {
-            $removalRow = keysToLower($this->db->table($removalsTable)->find($i));
+            $removalRow = keysToLower($this->db->table($removesTable)->find($i));
 
             $newId = $removalRow['new_id'];
 
@@ -104,11 +104,11 @@ class RemapCommand extends BaseCommand {
 
             $feedback = $affectedRows ? 'feedback' : 'info';
 
-            $this->$feedback('Updated from ' . $removalsTable . '.id = ' . $i . ' (' . $affectedRows . ' rows updated)');
+            $this->$feedback('Updated from ' . $removesTable . '.id = ' . $i . ' (' . $affectedRows . ' rows updated)');
 
             $totalAffectedRows += $affectedRows;
 
-            $i = $this->pdo->getNextId($i, $removalsTable);
+            $i = $this->pdo->getNextId($i, $removesTable);
         }
 
         return $totalAffectedRows;

@@ -61,7 +61,8 @@ class DedupeCommand extends BaseCommand {
             $this->feedback('Added new_id field to ' . $removalsTable);
         } else {
             $this->info('Creating temp_uniques table...');
-            $this->pdo->statement('CREATE TEMPORARY TABLE ' . ($tempTable = 'temp_uniques') . ' LIKE ' . $uniquesTable);
+            $tempTable = 'temp_uniques';
+            $this->pdo->statement('CREATE TEMPORARY TABLE ' . $tempTable . ' LIKE ' . $uniquesTable);
             $this->feedback('Created temporary table: ' . $tempTable);
         }
 

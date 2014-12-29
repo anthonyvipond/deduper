@@ -13,7 +13,7 @@ set_time_limit(0);
 require_once 'vendor/autoload.php';
 require_once 'config/database.php';
 
-$app = new Application('Database Deduplication and Remap Tool', '1.0');
+$app = new Application('MySQL Database Deduplication and Remap Tool', '1.0');
 
 $app->add(new DedupeCommand);
 $app->add(new LinkCommand);

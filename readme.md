@@ -75,7 +75,7 @@ id | name
 
 
 
-You will also get this table `people_removals`
+You will also get this table `people_removes`
 
 id | name | new_id
 ------------- | ------------- | -------------
@@ -112,7 +112,7 @@ id | firstname | lastname | birthday
 5  | Mary  |  Kate | 1981-08-08
 6  | mary  |  kate | 2001-03-03
 
-And another table `people_removals`
+And another table `people_removes`
 
 id | firstname | lastname | birthday | new_id
 ------------- | ------------- | ------------- | ------------- | -------------
@@ -123,7 +123,7 @@ id | firstname | lastname | birthday | new_id
 
 You can continue to deduplicate on different columns.
 
-Your `uniques` table will get smaller, and `your` removals table will get bigger.
+Your `uniques` table will get smaller, and your `removes` table will get bigger.
 
 Take another look at the last stage our tables were in.
 
@@ -142,7 +142,7 @@ id | firstname | lastname | birthday
 5  | Mary  |  Kate | 1981-08-08
 
 
-And `people_removals` is like this:
+And `people_removes` is like this:
 
 id | firstname | lastname | birthday | new_id
 ------------- | ------------- | ------------- | ------------- | -------------
@@ -160,7 +160,7 @@ php dlr link uniquesTable removesTable col1:col2:col3
 
 *ie*
 ```
-php dlr link people_uniques people_removals firstname:lastname:birthday
+php dlr link people_uniques people_removes firstname:lastname:birthday
 ```
 
 When doing linking, you should pass in the same columns as you did when deduping
@@ -170,9 +170,9 @@ If you ran the dedupe command several times with different combinations, you wan
 *ie*
 
 ```
-php dlr link people_uniques people_removals lastname:placeOfBirth
+php dlr link people_uniques people_removes lastname:placeOfBirth
 
-php dlr link people_uniques people_removals firstname:lastname:birthday
+php dlr link people_uniques people_removes firstname:lastname:birthday
 ```
 
 This way the more specific and higher quality groupings overwrite the lower quality ones
@@ -181,21 +181,21 @@ If you ran the `dedupe` command multiple times on different rules, you may end u
 
 You can pass the `--fillerMode` option to fill the rest with of the `new_id` with ids
 
-Check how many `new_id` have not been remapped after each run if you want:
+Check how many `new_id` have not been remapped after each run:
 ```sql
 SELECT count(1) FROM table_removes WHERE new_id IS NULL;
 ```
 
 *ie*
 ```
-php dlr link people_uniques people_removals firstname:lastname --fillerMode=true
+php dlr link people_uniques people_removes firstname:lastname --fillerMode=true
 ``` 
 
 ###Remapping####
 
-After you run `dedupe` you will have **table_uniques** and **table_removals**, as well as your original table.
+After you run `dedupe` you will have **table_uniques** and **table_removes**, as well as your original table.
 
-The removals table **needs to be present** for remapping to work. 
+The removes table **needs to be present** for remapping to work. 
 
 It won't be written to but **needs to be read from**.
 
@@ -215,22 +215,22 @@ id | team |
 2  | Knicks
 4  | Lakers
 
-And you also have this `teams_removals` table which is used for remapping:
+And you also have this `teams_removes` table which is used for remapping:
 
-id | year | new_id | 
+id | team | new_id | 
 ------------- | ------------- | -------------
-3  | 2006 | 2
-5  | 2007 | 4
+3  | Knicks | 2
+5  | Knicks | 2
 
 You can now remap the foreign keys on other tables pointing to `teams.id`
 
 ```
-php dlr remap remapTable removalsTable foreignKey
+php dlr remap remapTable removesTable foreignKey
 ```
 
 **i.e.**
 ```
-php dlr remap champions teams_removals team_id
+php dlr remap champions teams_removes team_id
 ```
 
 You should backup your remap table prior to running the `remap` command.
