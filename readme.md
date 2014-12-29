@@ -208,6 +208,15 @@ id | team
 4  | Lakers
 5  | Knicks
 
+And a `champions` table that needs remapping
+
+id | team_id
+------------- | -------------
+2  | 3
+3  | 2
+4  | 5
+5  | 2
+
 And the `teams_uniques` table (remember, you deduped already)
 
 id | team | 
@@ -231,6 +240,17 @@ php dlr remap remapTable removesTable foreignKey
 **i.e.**
 ```
 php dlr remap champions teams_removes team_id
+```
+
+The `champions` table now looks like this:
+
+```
+id | team_id
+------------- | -------------
+2  | 2
+3  | 2
+4  | 2
+5  | 2
 ```
 
 You should backup your remap table prior to running the `remap` command.
