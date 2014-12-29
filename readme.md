@@ -244,14 +244,12 @@ php dlr remap champions teams_removes team_id
 
 The `champions` table now looks like this:
 
-```
 id | team_id
 ------------- | -------------
 2  | 2
 3  | 2
 4  | 2
 5  | 2
-```
 
 You should backup your remap table prior to running the `remap` command.
 
